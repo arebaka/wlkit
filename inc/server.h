@@ -38,8 +38,8 @@
 struct wlkit_server;
 
 struct wlkit_server {
-	struct wl_display * wl_display;
-	struct wl_event_loop * wl_event_loop;
+	struct wl_display * display;
+	struct wl_event_loop * event_loop;
 	struct wlr_seat * seat;
 
 	struct wlr_backend * backend;
@@ -83,6 +83,8 @@ struct wlkit_server {
 	struct wl_list inputs;
 	struct wl_list workspaces;
 	struct wl_list windows;
+	struct wl_list decorations;
+	struct wl_list xdg_decorations;
 
 	struct wlkit_focus_manager * focus_manager;
 	struct wlkit_keyboard_manager * keyboard_manager;
@@ -93,6 +95,12 @@ struct wlkit_server {
 		struct wl_listener new_output;
 		struct wl_listener new_input;
 		struct wl_listener new_xdg_surface;
+		struct wl_listener xdg_activation_v1_request_activate;
+		struct wl_listener xdg_activation_v1_new_token;
+		struct wl_listener xdg_shell_toplevel;
+		struct wl_listener new_foreign_toplevel_capture_request;
+		struct wl_listener new_server_decoration;
+		struct wl_listener new_xdg_decoration;
 	} listeners;
 
 	struct {
@@ -138,12 +146,12 @@ void wlkit_on_destroy(
 	wlkit_handler_t handler
 );
 
-void wlkit_on_new_ouput(
+void wlkit_on_new_output(
 	struct wlkit_server * server,
 	wlkit_notify_handler_t handler
 );
 
-void wlkit_on_ouput_frame(
+void wlkit_on_output_frame(
 	struct wlkit_server * server,
 	wlkit_notify_handler_t handler
 );

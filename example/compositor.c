@@ -1,3 +1,4 @@
+#include <wlkit/server.h>
 #include <wlkit/wlkit.h>
 
 #include <wlr/types/wlr_seat.h>
@@ -134,8 +135,8 @@ int main() {
 	struct wlkit_server * server = wlkit_create(display, seat, setup_portal_env);
 
 	wlkit_on_destroy(server, on_destroy);
-	wlkit_on_new_ouput(server, setup_ouput_mode);
-	wlkit_on_ouput_frame(server, ai_test_draw_frame);
+	wlkit_on_new_output(server, setup_ouput_mode);
+	wlkit_on_output_frame(server, ai_test_draw_frame);
 
 	wlkit_start(server);
 	wlkit_run(server);

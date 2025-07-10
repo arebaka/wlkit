@@ -31,7 +31,7 @@ struct wlkit_root * wlkit_root_create(struct wlkit_server * server) {
 
 	wlr_scene_node_set_enabled(&root->staging->node, false);
 
-	root->output_layout = wlr_output_layout_create(server->wl_display);
+	root->output_layout = wlr_output_layout_create(server->display);
 	if (!root->output_layout) {
 		wlr_log(WLR_ERROR, "Failed to create wlkit root output layout");
 		wlr_scene_node_destroy(&root->scene->tree.node);
