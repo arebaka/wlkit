@@ -8,7 +8,9 @@ struct wlkit_node * wlkit_node_create() {
 }
 
 void wlkit_node_destroy(struct wlkit_node * node) {
-	free(node);
+	if (node) {
+		free(node);
+	}
 }
 
 void wlkit_node_init(struct wlkit_node * node, enum wlkit_node_type type, union wlkit_node_object object) {

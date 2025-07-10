@@ -47,6 +47,10 @@ struct wlkit_root * wlkit_root_create(struct wlkit_server * server) {
 }
 
 void wlkit_root_destroy(struct wlkit_root * root) {
+	if (!root) {
+		return;
+	}
+
 	wlr_scene_node_destroy(&root->scene->tree.node);
 	wlkit_node_destroy(root->node);
 	free(root);

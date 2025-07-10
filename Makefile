@@ -11,8 +11,8 @@ SOURCES = $(wildcard $(SRCDIR)/*.c)
 OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 HEADERS = $(wildcard $(INCDIR)/*.h)
 
-TARGET = $(BUILDDIR)/libwlcom.so
-STATIC_TARGET = $(BUILDDIR)/libwlcom.a
+TARGET = $(BUILDDIR)/libwlkit.so
+STATIC_TARGET = $(BUILDDIR)/libwlkit.a
 
 EXAMPLE_SRC = example/compositor.c
 EXAMPLE_TARGET = $(BUILDDIR)/example-compositor
@@ -47,22 +47,22 @@ $(BUILDDIR):
 example: $(EXAMPLE_TARGET)
 
 $(EXAMPLE_TARGET): $(EXAMPLE_SRC) $(TARGET) | $(BUILDDIR)
-	$(CC) $(CFLAGS) -o $@ $< -L$(BUILDDIR) -lwlcom $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $< -L$(BUILDDIR) -lwlkit $(LDFLAGS)
 
 clean:
 	rm -rf $(OBJDIR) $(BUILDDIR)
 
 install: $(TARGET) $(STATIC_TARGET)
 	install -d $(DESTDIR)/usr/lib
-	install -d $(DESTDIR)/usr/include/wlcom
+	install -d $(DESTDIR)/usr/include/wlkit
 	install -m 644 $(TARGET) $(DESTDIR)/usr/lib/
 	install -m 644 $(STATIC_TARGET) $(DESTDIR)/usr/lib/
-	install -m 644 $(INCDIR)/*.h $(DESTDIR)/usr/include/wlcom/
+	install -m 644 $(INCDIR)/*.h $(DESTDIR)/usr/include/wlkit/
 
 uninstall:
-	rm -f $(DESTDIR)/usr/lib/libwlcom.so
-	rm -f $(DESTDIR)/usr/lib/libwlcom.a
-	rm -rf $(DESTDIR)/usr/include/wlcom
+	rm -f $(DESTDIR)/usr/lib/libwlkit.so
+	rm -f $(DESTDIR)/usr/lib/libwlkit.a
+	rm -rf $(DESTDIR)/usr/include/wlkit
 
 debug: CFLAGS += -DDEBUG -g3
 debug: $(TARGET)
