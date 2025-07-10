@@ -15,4 +15,6 @@
 #include "window.h"
 #include "workspace.h"
 
+#include "util.h"
+
 #endif // WLKIT_H

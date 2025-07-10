@@ -32,8 +32,8 @@ static int handle_output_repaint_timer(void * data) {
 }
 
 static void handle_new_output(struct wl_listener * listener, void * data) {
-    struct wlkit_server * server = wl_container_of(listener, server, listeners.new_output);
-    struct wlr_output * wlr_output = data;
+	struct wlkit_server * server = wl_container_of(listener, server, listeners.new_output);
+	struct wlr_output * wlr_output = data;
 
 	struct wlr_scene_output * scene_output = wlr_scene_output_create(server->root->scene, wlr_output);
 	if (!scene_output) {
@@ -41,14 +41,14 @@ static void handle_new_output(struct wl_listener * listener, void * data) {
 		return;
 	}
 
-    struct wlkit_output * output = wlkit_output_create(server, wlr_output, scene_output);
+	struct wlkit_output * output = wlkit_output_create(server, wlr_output, scene_output);
 	if (!output) {
 		wlr_log(WLR_ERROR, "Failed to create a wlkit output");
 		wlr_scene_output_destroy(scene_output);
 		return;
 	}
 
-    if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer)) {
+	if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer)) {
 		wlr_log(WLR_ERROR, "Failed to init wlkit output render");
 		return;
 	}
@@ -66,8 +66,8 @@ static void handle_new_output(struct wl_listener * listener, void * data) {
 
 	output->repaint_timer = wl_event_loop_add_timer(server->event_loop, handle_output_repaint_timer, output);
 
-    wlr_output_layout_add_auto(server->root->output_layout, wlr_output);
-    wl_list_insert(&server->outputs, &output->link);
+	wlr_output_layout_add_auto(server->root->output_layout, wlr_output);
+	wl_list_insert(&server->outputs, &output->link);
 
 	struct wlkit_notify_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.new_output, link) {
@@ -76,68 +76,68 @@ static void handle_new_output(struct wl_listener * listener, void * data) {
 }
 /*
 static void handle_new_input(struct wl_listener * listener, void * data) {
-    struct wlkit_server * server = wl_container_of(listener, server, new_input);
-    struct wlr_input_device * device = data;
+	struct wlkit_server * server = wl_container_of(listener, server, new_input);
+	struct wlr_input_device * device = data;
 
-    struct wlkit_input * input = malloc(sizeof(*input));
+	struct wlkit_input * input = malloc(sizeof(*input));
 	if (!input) {
 		wlr_log(WLR_ERROR, "Unable to allocate wlkit input");
-        return;
+		return;
 	}
-    input->server = server;
-    input->device = device;
+	input->server = server;
+	input->device = device;
 
-    switch (device->type) {
-    case WLR_INPUT_DEVICE_KEYBOARD:
-        wlr_seat_set_keyboard(server->seat, device);
-        break;
-    case WLR_INPUT_DEVICE_POINTER:
-        wlr_seat_set_pointer(server->seat, device);
-        break;
-    default:
-        break;
-    }
+	switch (device->type) {
+	case WLR_INPUT_DEVICE_KEYBOARD:
+		wlr_seat_set_keyboard(server->seat, device);
+		break;
+	case WLR_INPUT_DEVICE_POINTER:
+		wlr_seat_set_pointer(server->seat, device);
+		break;
+	default:
+		break;
+	}
 
-    wlr_seat_set_capabilities(server->seat,
-        WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER);
+	wlr_seat_set_capabilities(server->seat,
+		WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER);
 
-    wl_list_insert(&server->inputs, &input->link);
+	wl_list_insert(&server->inputs, &input->link);
 }
 */
 static void handle_new_xdg_surface(struct wl_listener * listener, void * data) {
-    struct wlkit_server * server = wl_container_of(listener, server, listeners.new_xdg_surface);
-    struct wlr_xdg_surface * xdg_surface = data;
+	struct wlkit_server * server = wl_container_of(listener, server, listeners.new_xdg_surface);
+	struct wlr_xdg_surface * xdg_surface = data;
 
-    if (xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-        return;
-    }
-
-    struct wlkit_window *window = malloc(sizeof(*window));
-	if (!window) {
-		wlr_log(WLR_ERROR, "Unable to allocate wlkit window");
-        return;
+	if (xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		return;
 	}
 
-    window->server = server;
-    window->xdg_surface = xdg_surface;
-    window->surface = xdg_surface->surface;
-    window->workspace = server->current_workspace;
+	struct wlkit_window *window = malloc(sizeof(*window));
+	if (!window) {
+		wlr_log(WLR_ERROR, "Unable to allocate wlkit window");
+		return;
+	}
 
-    // Add to current workspace
-    wl_list_insert(&server->current_workspace->windows, &window->link);
-    wl_list_insert(&server->windows, &window->link);
+	window->server = server;
+	window->xdg_surface = xdg_surface;
+	window->surface = xdg_surface->surface;
+	window->workspace = server->current_workspace;
+
+	// Add to current workspace
+	wl_list_insert(&server->current_workspace->windows, &window->link);
+	wl_list_insert(&server->windows, &window->link);
 
 	// Set up listeners
 	// Will be implemented in window.c
-    window->map.notify = NULL;
-    window->unmap.notify = NULL;
-    window->destroy.notify = NULL;
+	window->map.notify = NULL;
+	window->unmap.notify = NULL;
+	window->destroy.notify = NULL;
 
-    // Create foreign toplevel for portal support
-    if (server->portal_manager) {
-        window->foreign_toplevel = wlr_foreign_toplevel_handle_v1_create(
-            server->portal_manager->foreign_toplevel_manager_v1);
-    }
+	// Create foreign toplevel for portal support
+	if (server->portal_manager) {
+		window->foreign_toplevel = wlr_foreign_toplevel_handle_v1_create(
+			server->portal_manager->foreign_toplevel_manager_v1);
+	}
 }
 
 static void handle_xdg_activation_v1_request_activate(struct wl_listener * listener, void * data) {}
@@ -153,18 +153,18 @@ static void handle_new_server_decoration(struct wl_listener * listener, void * d
 static void handle_new_xdg_decoration(struct wl_listener * listener, void * data) {}
 
 struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat * seat, wlkit_server_handler_t callback) {
-    if (!display || !seat) {
-        return NULL;
-    }
-
-    struct wlkit_server * server = malloc(sizeof(*server));
-	if (!server) {
-		wlr_log(WLR_ERROR, "Unable to allocate wlkit server");
-        return NULL;
+	if (!display || !seat) {
+		return NULL;
 	}
 
-    server->display = display;
-    server->seat = seat;
+	struct wlkit_server * server = malloc(sizeof(*server));
+	if (!server) {
+		wlr_log(WLR_ERROR, "Unable to allocate wlkit server");
+		return NULL;
+	}
+
+	server->display = display;
+	server->seat = seat;
 
 	wl_list_init(&server->handlers.create);
 	wl_list_init(&server->handlers.destroy);
@@ -253,9 +253,9 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	server->root = wlkit_root_create(server);
 
 	wl_list_init(&server->outputs);
-    wl_list_init(&server->inputs);
-    wl_list_init(&server->workspaces);
-    wl_list_init(&server->windows);
+	wl_list_init(&server->inputs);
+	wl_list_init(&server->workspaces);
+	wl_list_init(&server->windows);
 	wl_list_init(&server->decorations);
 	wl_list_init(&server->xdg_decorations);
 
@@ -263,14 +263,14 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	// TODO keyboard manager
 	// TODO portal manager
 
-    server->listeners.new_output.notify = handle_new_output;
-    wl_signal_add(&server->backend->events.new_output, &server->listeners.new_output);
+	server->listeners.new_output.notify = handle_new_output;
+	wl_signal_add(&server->backend->events.new_output, &server->listeners.new_output);
 
-    // server->listeners.new_input.notify = handle_new_input;
-    // wl_signal_add(&backend->events.new_input, &server->listeners.new_input);
+	// server->listeners.new_input.notify = handle_new_input;
+	// wl_signal_add(&backend->events.new_input, &server->listeners.new_input);
 
-    // server->listeners.new_xdg_surface.notify = handle_new_xdg_surface;
-    // wl_signal_add(&server->xdg_shell->events.new_surface, &server->listeners.new_xdg_surface);
+	// server->listeners.new_xdg_surface.notify = handle_new_xdg_surface;
+	// wl_signal_add(&server->xdg_shell->events.new_surface, &server->listeners.new_xdg_surface);
 
 	wl_list_init(&server->handlers.renderer_lost);
 	wl_list_init(&server->handlers.new_output);
@@ -278,7 +278,7 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	wl_list_init(&server->handlers.new_xdg_surface);
 	wl_list_init(&server->handlers.output_frame);
 
-    server->running = false;
+	server->running = false;
 	server->user_data = NULL;
 
 	struct wlkit_server_handler * wrapper;
@@ -290,118 +290,114 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 }
 
 void wlkit_destroy(struct wlkit_server * server) {
-    if (!server) {
-        return;
-    }
+	if (!server) {
+		return;
+	}
 
 	struct wlkit_server_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.destroy, link) {
 		wrapper->handler(server);
 	}
 
-    struct wlkit_window * window, * tmp_window;
-    wl_list_for_each_safe(window, tmp_window, &server->windows, link) {
-        wlkit_window_destroy(window);
-    }
+	struct wlkit_window * window, * tmp_window;
+	wl_list_for_each_safe(window, tmp_window, &server->windows, link) {
+		wlkit_window_destroy(window);
+	}
 
-    struct wlkit_workspace *workspace, *tmp_workspace;
-    wl_list_for_each_safe(workspace, tmp_workspace, &server->workspaces, link) {
-        wlkit_workspace_destroy(workspace, NULL);
-    }
+	struct wlkit_workspace *workspace, *tmp_workspace;
+	wl_list_for_each_safe(workspace, tmp_workspace, &server->workspaces, link) {
+		wlkit_workspace_destroy(workspace, NULL);
+	}
 
-    if (server->keyboard_manager) {
-        struct wlkit_keyboard_layout * layout, * tmp_layout;
-        wl_list_for_each_safe(layout, tmp_layout, &server->keyboard_manager->layouts, link) {
+	if (server->keyboard_manager) {
+		struct wlkit_keyboard_layout * layout, * tmp_layout;
+		wl_list_for_each_safe(layout, tmp_layout, &server->keyboard_manager->layouts, link) {
 			wlkit_keyboard_layout_destroy(layout);
-        }
-        free(server->keyboard_manager);
-    }
+		}
+		free(server->keyboard_manager);
+	}
 
-    wlr_allocator_destroy(server->allocator);
-    wlr_renderer_destroy(server->renderer);
-    wlr_backend_destroy(server->backend);
-    wl_event_loop_destroy(server->event_loop);
+	wlr_allocator_destroy(server->allocator);
+	wlr_renderer_destroy(server->renderer);
+	wlr_backend_destroy(server->backend);
+	wl_event_loop_destroy(server->event_loop);
 
-    free(server);
+	free(server);
 }
 
 bool wlkit_start(struct wlkit_server * server) {
-    if (!server) {
-        return false;
-    }
+	if (!server) {
+		return false;
+	}
 
-    server->socket = wl_display_add_socket_auto(server->display);
-    if (!server->socket) {
-        wlr_log(WLR_ERROR, "Failed to create Wayland socket");
-        return false;
-    }
+	server->socket = wl_display_add_socket_auto(server->display);
+	if (!server->socket) {
+		wlr_log(WLR_ERROR, "Failed to create Wayland socket");
+		return false;
+	}
 
-    if (!wlr_backend_start(server->backend)) {
-        wlr_log(WLR_ERROR, "Failed to start wlkit backend");
-        return false;
-    }
+	if (!wlr_backend_start(server->backend)) {
+		wlr_log(WLR_ERROR, "Failed to start wlkit backend");
+		return false;
+	}
 
-    setenv("WAYLAND_DISPLAY", server->socket, true);
-    wlr_log(WLR_INFO, "Running wlkit on WAYLAND_DISPLAY=%s", server->socket);
+	setenv("WAYLAND_DISPLAY", server->socket, true);
+	wlr_log(WLR_INFO, "Running wlkit on WAYLAND_DISPLAY=%s", server->socket);
 
-    server->running = true;
+	server->running = true;
 
 	struct wlkit_server_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.start, link) {
 		wrapper->handler(server);
 	}
 
-    return true;
+	return true;
 }
 
 void wlkit_run(struct wlkit_server * server) {
-    if (!server || !server->running) {
-        return;
-    }
+	if (!server || !server->running) {
+		return;
+	}
 
 	struct wlkit_server_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.run, link) {
 		wrapper->handler(server);
 	}
 
-    wl_display_run(server->display);
+	wl_display_run(server->display);
 }
 
 void wlkit_stop(struct wlkit_server * server) {
-    if (!server) {
-        return;
-    }
+	if (!server) {
+		return;
+	}
 
-    server->running = false;
-    wl_display_terminate(server->display);
+	server->running = false;
+	wl_display_terminate(server->display);
+}
+
+static void assume_handler(struct wl_list * handlers, wlkit_server_handler_t handler) {
+	struct wlkit_server_handler * wrapper = malloc(sizeof(*wrapper));
+	wrapper->handler = handler;
+	wl_list_insert(handlers, &wrapper->link);
 }
 
 void wlkit_on_destroy(struct wlkit_server * server, wlkit_server_handler_t handler) {
-	struct wlkit_server_handler * wrapper = malloc(sizeof(*wrapper));
-	wrapper->handler = handler;
-    wl_list_insert(&server->handlers.destroy, &wrapper->link);
+	assume_handler(&server->handlers.destroy, handler);
 }
 
 void wlkit_on_start(struct wlkit_server * server, wlkit_server_handler_t handler) {
-	struct wlkit_server_handler * wrapper = malloc(sizeof(*wrapper));
-	wrapper->handler = handler;
-    wl_list_insert(&server->handlers.start, &wrapper->link);
+	assume_handler(&server->handlers.start, handler);
 }
 
 void wlkit_on_run(struct wlkit_server * server, wlkit_server_handler_t handler) {
-	struct wlkit_server_handler * wrapper = malloc(sizeof(*wrapper));
-	wrapper->handler = handler;
-    wl_list_insert(&server->handlers.run, &wrapper->link);
+	assume_handler(&server->handlers.run, handler);
 }
 
 void wlkit_on_new_output(struct wlkit_server * server, wlkit_notify_handler_t handler) {
-	struct wlkit_notify_handler * wrapper = malloc(sizeof(*wrapper));
-	wrapper->handler = handler;
-    wl_list_insert(&server->handlers.new_output, &wrapper->link);
+	wlkit_assume_notify_handler(&server->handlers.new_output, handler);
 }
 
 void wlkit_on_output_frame(struct wlkit_server * server, wlkit_notify_handler_t handler) {
-	struct wlkit_notify_handler * wrapper = malloc(sizeof(*wrapper));
-	wrapper->handler = handler;
-    wl_list_insert(&server->handlers.output_frame, &wrapper->link);
+	wlkit_assume_notify_handler(&server->handlers.output_frame, handler);
 };

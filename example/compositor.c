@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <wlkit/server.h>
 #include <wlkit/wlkit.h>
 
@@ -8,31 +9,31 @@
 #include <wlr/render/wlr_texture.h>
 
 void setup_portal_env(struct wlkit_server * server) {
-    (void)server;  // unused for now
-    setenv("XDG_CURRENT_DESKTOP", "wlkit", 1);
-    setenv("XDG_SESSION_TYPE", "wayland", 1);
-    setenv("XDG_SESSION_DESKTOP", "wlkit", 1);
+	(void)server;  // unused for now
+	setenv("XDG_CURRENT_DESKTOP", "wlkit", 1);
+	setenv("XDG_SESSION_TYPE", "wayland", 1);
+	setenv("XDG_SESSION_DESKTOP", "wlkit", 1);
 }
 
 void on_destroy(struct wlkit_server * server) {
-    char info[256];
-    snprintf(info, sizeof(info),
-        "Exit; Out:%u In:%u WS:%u Win:%u Seat:%s\n",
-        wl_list_length(&server->outputs),
-        wl_list_length(&server->inputs),
-        wl_list_length(&server->workspaces),
-        wl_list_length(&server->windows),
+	char info[256];
+	snprintf(info, sizeof(info),
+		"Exit; Out:%u In:%u WS:%u Win:%u Seat:%s\n",
+		wl_list_length(&server->outputs),
+		wl_list_length(&server->inputs),
+		wl_list_length(&server->workspaces),
+		wl_list_length(&server->windows),
 		server->seat->name
-    );
+	);
 	printf(info);
 }
 
-void create_default_workspace(struct * server) {
-    server->current_workspace = wlkit_workspace_create(server, &wlkit_layout_floating, 1, "default");
+void create_default_workspace(struct wlkit_server * server) {
+	server->current_workspace = wlkit_workspace_create(server, &wlkit_layout_floating, 1, "default");
 }
 
 void setup_ouput_mode(struct wl_listener * listener, void * data, struct wlkit_server * server) {
-    struct wlr_output * wlr_output = data;
+	struct wlr_output * wlr_output = data;
 
 	struct wlr_output_state state;
 	wlr_output_state_init(&state);
@@ -40,16 +41,16 @@ void setup_ouput_mode(struct wl_listener * listener, void * data, struct wlkit_s
 	wlr_output_state_set_scale(&state, 1.0f);
 	wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_NORMAL);
 
-    struct wlr_output_mode * mode = wlr_output_preferred_mode(wlr_output);
-    if (mode) {
+	struct wlr_output_mode * mode = wlr_output_preferred_mode(wlr_output);
+	if (mode) {
 		wlr_output_state_set_mode(&state, mode);
-    }
+	}
 
 	wlr_output_commit_state(wlr_output, &state);
 	wlr_output_state_finish(&state);
 }
 
-static void ai_test_draw_frame(struct wl_listener * listener, void * data, struct wlkit_server * server) {
+void ai_test_draw_frame(struct wl_listener * listener, void * data, struct wlkit_server * server) {
 	struct wlkit_output * output = wl_container_of(listener, output, listeners.frame);
 	struct wlr_output * wlr_output = output->wlr_output;
 	struct wlr_allocator * allocator = server->allocator;
@@ -94,19 +95,19 @@ static void ai_test_draw_frame(struct wl_listener * listener, void * data, struc
 	};
 	wlr_render_pass_add_rect(pass, &rect_opts);
 
-    // 7) Прогресс‑бар секунд внизу
-    time_t now = time(NULL);
-    struct tm *tm = localtime(&now);
-    float frac = tm->tm_sec / 60.0f;
-    int bar_width = (int)(wlr_output->width * frac);
-    struct wlr_render_rect_options secbar = {
-        .box = { .x = 0,
-                 .y = wlr_output->height - 200,
-                 .width = bar_width,
-                 .height = 20 },
-        .color = { 0.2f, 0.6f, 1.0f, 0.8f },
-    };
-    wlr_render_pass_add_rect(pass, &secbar);
+	// 7) Прогресс‑бар секунд внизу
+	time_t now = time(NULL);
+	struct tm *tm = localtime(&now);
+	float frac = tm->tm_sec / 60.0f;
+	int bar_width = (int)(wlr_output->width * frac);
+	struct wlr_render_rect_options secbar = {
+		.box = { .x = 0,
+				 .y = wlr_output->height - 200,
+				 .width = bar_width,
+				 .height = 20 },
+		.color = { 0.2f, 0.6f, 1.0f, 0.8f },
+	};
+	wlr_render_pass_add_rect(pass, &secbar);
 
 	// 6. Нарисуем курсоры поверх
 	wlr_output_add_software_cursors_to_render_pass(wlr_output, pass, NULL);
