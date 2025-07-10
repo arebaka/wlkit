@@ -27,6 +27,10 @@ void on_destroy(struct wlkit_server * server) {
 	printf(info);
 }
 
+void create_default_workspace(struct * server) {
+    server->current_workspace = wlkit_workspace_create(server, &wlkit_layout_floating, 1, "default");
+}
+
 void setup_ouput_mode(struct wl_listener * listener, void * data, struct wlkit_server * server) {
     struct wlr_output * wlr_output = data;
 
@@ -135,6 +139,7 @@ int main() {
 	struct wlkit_server * server = wlkit_create(display, seat, setup_portal_env);
 
 	wlkit_on_destroy(server, on_destroy);
+	wlkit_on_start(server, create_default_workspace);
 	wlkit_on_new_output(server, setup_ouput_mode);
 	wlkit_on_output_frame(server, ai_test_draw_frame);
 

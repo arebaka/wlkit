@@ -36,6 +36,11 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 struct wlkit_server;
+typedef void (*wlkit_server_handler_t)(struct wlkit_server * server);
+struct wlkit_server_handler {
+	struct wl_list link;
+	wlkit_server_handler_t handler;
+};
 
 struct wlkit_server {
 	struct wl_display * display;
@@ -104,13 +109,15 @@ struct wlkit_server {
 	} listeners;
 
 	struct {
-		wlkit_handler_t create;
-		wlkit_handler_t destroy;
-		wlkit_notify_handler_t renderer_lost;
-		wlkit_notify_handler_t new_output;
-		wlkit_notify_handler_t new_input;
-		wlkit_notify_handler_t new_xdg_surface;
-		wlkit_notify_handler_t output_frame;
+		struct wl_list create;
+		struct wl_list destroy;
+		struct wl_list start;
+		struct wl_list run;
+		struct wl_list renderer_lost;
+		struct wl_list new_output;
+		struct wl_list new_input;
+		struct wl_list new_xdg_surface;
+		struct wl_list output_frame;
 	} handlers;
 
 	const char * socket;
@@ -122,7 +129,7 @@ struct wlkit_server {
 struct wlkit_server * wlkit_create(
 	struct wl_display * display,
 	struct wlr_seat * seat,
-	wlkit_handler_t callback
+	wlkit_server_handler_t callback
 );
 
 void wlkit_destroy(
@@ -143,7 +150,17 @@ void wlkit_stop(
 
 void wlkit_on_destroy(
 	struct wlkit_server * server,
-	wlkit_handler_t handler
+	wlkit_server_handler_t handler
+);
+
+void wlkit_on_start(
+	struct wlkit_server * server,
+	wlkit_server_handler_t handler
+);
+
+void wlkit_on_run(
+	struct wlkit_server * server,
+	wlkit_server_handler_t handler
 );
 
 void wlkit_on_new_output(
