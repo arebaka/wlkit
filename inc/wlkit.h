@@ -2,6 +2,7 @@
 #define WLKIT_H
 
 #include "capture.h"
+#include "cursor.h"
 #include "focus.h"
 #include "input.h"
 #include "keyboard.h"

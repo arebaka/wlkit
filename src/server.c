@@ -74,9 +74,9 @@ static void handle_new_output(struct wl_listener * listener, void * data) {
 		wrapper->handler(listener, data, server);
 	}
 }
-/*
+
 static void handle_new_input(struct wl_listener * listener, void * data) {
-	struct wlkit_server * server = wl_container_of(listener, server, new_input);
+	struct wlkit_server * server = wl_container_of(listener, server, listeners.new_input);
 	struct wlr_input_device * device = data;
 
 	struct wlkit_input * input = malloc(sizeof(*input));
@@ -89,10 +89,10 @@ static void handle_new_input(struct wl_listener * listener, void * data) {
 
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
-		wlr_seat_set_keyboard(server->seat, device);
+		// wlr_seat_set_keyboard(server->seat, device);  // TODO create keyboard
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
-		wlr_seat_set_pointer(server->seat, device);
+		// wlr_seat_set_pointer(server->seat, device);  // TODO create pointer
 		break;
 	default:
 		break;
@@ -103,7 +103,7 @@ static void handle_new_input(struct wl_listener * listener, void * data) {
 
 	wl_list_insert(&server->inputs, &input->link);
 }
-*/
+
 static void handle_new_xdg_surface(struct wl_listener * listener, void * data) {
 	struct wlkit_server * server = wl_container_of(listener, server, listeners.new_xdg_surface);
 	struct wlr_xdg_surface * xdg_surface = data;
@@ -191,6 +191,8 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 		return NULL;
 	}
 
+	wlr_renderer_init_wl_display(server->renderer, server->display);
+
 	server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
 	if (!server->allocator) {
 		wlr_log(WLR_ERROR, "Unable to create wlkit allocator");
@@ -201,7 +203,6 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	wlr_subcompositor_create(server->display);
 
 	server->data_device_manager = wlr_data_device_manager_create(server->display);
-
 	server->idle_notifier_v1 = wlr_idle_notifier_v1_create(server->display);
 
 	if (wlr_renderer_get_texture_formats(server->renderer, WLR_BUFFER_CAP_DMABUF) != NULL) {
@@ -266,11 +267,11 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	server->listeners.new_output.notify = handle_new_output;
 	wl_signal_add(&server->backend->events.new_output, &server->listeners.new_output);
 
-	// server->listeners.new_input.notify = handle_new_input;
-	// wl_signal_add(&backend->events.new_input, &server->listeners.new_input);
+	server->listeners.new_input.notify = handle_new_input;
+	wl_signal_add(&server->backend->events.new_input, &server->listeners.new_input);
 
-	// server->listeners.new_xdg_surface.notify = handle_new_xdg_surface;
-	// wl_signal_add(&server->xdg_shell->events.new_surface, &server->listeners.new_xdg_surface);
+	server->listeners.new_xdg_surface.notify = handle_new_xdg_surface;
+	wl_signal_add(&server->xdg_shell->events.new_surface, &server->listeners.new_xdg_surface);
 
 	wl_list_init(&server->handlers.renderer_lost);
 	wl_list_init(&server->handlers.new_output);

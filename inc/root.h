@@ -15,10 +15,12 @@ struct wlkit_root {
 	struct wlr_scene_tree * staging;
 	struct wlr_scene_tree * layer_tree;
 
+	wlkit_geo x, y, width, height;
+
+	struct wlkit_cursor * cursor;
+
 	struct wl_list layers;
 	struct wl_list outputs;
-
-	wlkit_geo x, y, width, height;
 
 	struct {
 		struct wl_signal new_node;

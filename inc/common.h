@@ -24,6 +24,7 @@ struct wlkit_workspace;
 struct wlkit_layout;
 struct wlkit_window;
 struct wlkit_node;
+struct wlkit_cursor;
 
 struct wlkit_keyboard_manager;
 struct wlkit_focus_manager;

@@ -2,6 +2,11 @@
 
 struct wlkit_node * wlkit_node_create() {
 	struct wlkit_node * node = malloc(sizeof(*node));
+	if (!node) {
+		wlr_log(WLR_ERROR, "Unable to allocate wlkit node");
+		return NULL;
+	}
+
 	static wlkit_node_id next_id = 0;
 	node->id = ++next_id;
 	return node;
