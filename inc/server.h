@@ -35,6 +35,8 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+struct wlkit_server;
+
 struct wlkit_server {
 	struct wl_display * wl_display;
 	struct wl_event_loop * wl_event_loop;
@@ -93,6 +95,16 @@ struct wlkit_server {
 		struct wl_listener new_xdg_surface;
 	} listeners;
 
+	struct {
+		wlkit_handler_t create;
+		wlkit_handler_t destroy;
+		wlkit_notify_handler_t renderer_lost;
+		wlkit_notify_handler_t new_output;
+		wlkit_notify_handler_t new_input;
+		wlkit_notify_handler_t new_xdg_surface;
+		wlkit_notify_handler_t output_frame;
+	} handlers;
+
 	const char * socket;
 	bool running;
 
@@ -101,7 +113,8 @@ struct wlkit_server {
 
 struct wlkit_server * wlkit_create(
 	struct wl_display * display,
-	struct wlr_seat * seat
+	struct wlr_seat * seat,
+	wlkit_handler_t callback
 );
 
 void wlkit_destroy(
@@ -118,6 +131,21 @@ void wlkit_run(
 
 void wlkit_stop(
 	struct wlkit_server * server
+);
+
+void wlkit_on_destroy(
+	struct wlkit_server * server,
+	wlkit_handler_t handler
+);
+
+void wlkit_on_new_ouput(
+	struct wlkit_server * server,
+	wlkit_notify_handler_t handler
+);
+
+void wlkit_on_ouput_frame(
+	struct wlkit_server * server,
+	wlkit_notify_handler_t handler
 );
 
 #endif // WLKIT_SERVER_H

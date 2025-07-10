@@ -29,4 +29,7 @@ struct wlkit_keyboard_manager;
 struct wlkit_focus_manager;
 struct wlkit_portal_manager;
 
+typedef void (*wlkit_handler_t)(struct wlkit_server * server);
+typedef void (*wlkit_notify_handler_t)(struct wl_listener * listener, void * data, struct wlkit_server * server);
+
 #endif // WLKIT_COMMON_H
