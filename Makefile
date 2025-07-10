@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -O2 -g -D_POSIX_C_SOURCE=200809L
+CFLAGS = -Wall -Wextra -std=c11 -O2 -g
 LDFLAGS = -lwayland-server -lwlroots-0.19 -lxkbcommon -lpixman-1 -lm
 
 SRCDIR = src
@@ -24,6 +24,7 @@ LDFLAGS += $(shell pkg-config --libs $(PKGS))
 CFLAGS += -I$(INCDIR)
 CFLAGS += -fPIC
 CFLAGS += -DWLR_USE_UNSTABLE
+CFLAGS += -D_POSIX_C_SOURCE=200809L
 
 .PHONY: all clean install example
 

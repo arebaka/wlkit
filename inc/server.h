@@ -112,7 +112,7 @@ struct wlkit_server {
 		struct wl_list create;
 		struct wl_list destroy;
 		struct wl_list start;
-		struct wl_list run;
+		struct wl_list stop;
 		struct wl_list renderer_lost;
 		struct wl_list new_output;
 		struct wl_list new_input;
@@ -154,6 +154,11 @@ void wlkit_on_destroy(
 );
 
 void wlkit_on_start(
+	struct wlkit_server * server,
+	wlkit_server_handler_t handler
+);
+
+void wlkit_on_stop(
 	struct wlkit_server * server,
 	wlkit_server_handler_t handler
 );

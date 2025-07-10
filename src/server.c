@@ -25,7 +25,7 @@ static void handle_output_destroy(struct wl_listener * listener, void * data) {
 static void handle_output_present(struct wl_listener * listener, void * data) {
 }
 
-static void handle_ouput_request_state(struct wl_listener * listener, void * data) {
+static void handle_output_request_state(struct wl_listener * listener, void * data) {
 }
 
 static int handle_output_repaint_timer(void * data) {
@@ -62,7 +62,7 @@ static void handle_new_output(struct wl_listener * listener, void * data) {
 	wl_signal_add(&wlr_output->events.present, &output->listeners.present);
 	output->listeners.present.notify = handle_output_present;
 	wl_signal_add(&wlr_output->events.request_state, &output->listeners.request_state);
-	output->listeners.request_state.notify = handle_ouput_request_state;
+	output->listeners.request_state.notify = handle_output_request_state;
 
 	output->repaint_timer = wl_event_loop_add_timer(server->event_loop, handle_output_repaint_timer, output);
 
@@ -112,7 +112,7 @@ static void handle_new_xdg_surface(struct wl_listener * listener, void * data) {
 		return;
 	}
 
-	struct wlkit_window *window = malloc(sizeof(*window));
+	struct wlkit_window * window = malloc(sizeof(*window));
 	if (!window) {
 		wlr_log(WLR_ERROR, "Unable to allocate wlkit window");
 		return;
@@ -169,7 +169,7 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	wl_list_init(&server->handlers.create);
 	wl_list_init(&server->handlers.destroy);
 	wl_list_init(&server->handlers.start);
-	wl_list_init(&server->handlers.run);
+	wl_list_init(&server->handlers.stop);
 
 	if (callback) {
 		struct wlkit_server_handler * wrapper = malloc(sizeof(*wrapper));
@@ -345,32 +345,25 @@ bool wlkit_start(struct wlkit_server * server) {
 	setenv("WAYLAND_DISPLAY", server->socket, true);
 	wlr_log(WLR_INFO, "Running wlkit on WAYLAND_DISPLAY=%s", server->socket);
 
-	server->running = true;
-
 	struct wlkit_server_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.start, link) {
 		wrapper->handler(server);
 	}
 
-	return true;
-}
-
-void wlkit_run(struct wlkit_server * server) {
-	if (!server || !server->running) {
-		return;
-	}
-
-	struct wlkit_server_handler * wrapper;
-	wl_list_for_each(wrapper, &server->handlers.run, link) {
-		wrapper->handler(server);
-	}
-
+	server->running = true;
 	wl_display_run(server->display);
+
+	return true;
 }
 
 void wlkit_stop(struct wlkit_server * server) {
 	if (!server) {
 		return;
+	}
+
+	struct wlkit_server_handler * wrapper;
+	wl_list_for_each(wrapper, &server->handlers.stop, link) {
+		wrapper->handler(server);
 	}
 
 	server->running = false;
@@ -391,8 +384,8 @@ void wlkit_on_start(struct wlkit_server * server, wlkit_server_handler_t handler
 	assume_handler(&server->handlers.start, handler);
 }
 
-void wlkit_on_run(struct wlkit_server * server, wlkit_server_handler_t handler) {
-	assume_handler(&server->handlers.run, handler);
+void wlkit_on_stop(struct wlkit_server * server, wlkit_server_handler_t handler) {
+	assume_handler(&server->handlers.stop, handler);
 }
 
 void wlkit_on_new_output(struct wlkit_server * server, wlkit_notify_handler_t handler) {
