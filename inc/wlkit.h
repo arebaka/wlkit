@@ -11,6 +11,7 @@
 #include "node.h"
 #include "output.h"
 #include "portal.h"
+#include "render.h"
 #include "root.h"
 #include "server.h"
 #include "window.h"

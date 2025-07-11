@@ -25,3 +25,7 @@ struct wlkit_cursor * wlkit_cursor_create(
 	struct wlkit_root * root,
 	char * name, wlkit_cursor_size size
 );
+
+void wlkit_cursor_destroy(
+	struct wlkit_cursor * cursor
+);

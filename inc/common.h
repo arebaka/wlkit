@@ -25,6 +25,7 @@ struct wlkit_layout;
 struct wlkit_window;
 struct wlkit_node;
 struct wlkit_cursor;
+struct wlkit_render;
 
 struct wlkit_keyboard_manager;
 struct wlkit_focus_manager;
@@ -39,6 +40,7 @@ union wlkit_object {
 	struct wlkit_window * window;
 	struct wlkit_node * node;
 	struct wlkit_cursor * cursor;
+	struct wlkit_render * render;
 };
 
 typedef void (*wlkit_notify_handler_t)(struct wl_listener * listener, void * data, union wlkit_object * object);

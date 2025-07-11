@@ -42,6 +42,7 @@ struct wlkit_root * wlkit_root_create(struct wlkit_server * server) {
 
 	if (failed) {
 		wlr_log(WLR_ERROR, "Unable to allocate wlkit root scene trees");
+		wlr_output_layout_destroy(root->output_layout);
 		wlr_scene_node_destroy(&root->scene->tree.node);
 		wlkit_node_destroy(root->node);
 		free(root);

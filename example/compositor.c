@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <wayland-server-core.h>
+#include <wlkit/output.h>
 #include <wlkit/server.h>
 #include <wlkit/wlkit.h>
 
@@ -33,28 +34,20 @@ void create_default_workspace(struct wlkit_server * server) {
 	server->current_workspace = wlkit_workspace_create(server, &wlkit_layout_floating, 1, "default");
 }
 
-void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_object * object) {
-	struct wlkit_output * output = object->output;
-	struct wlr_output * wlr_output = output->wlr_output;
-	if (!wlr_output) {
-		wlr_log(WLR_ERROR, "Invalid output");
-		return;
-	}
-
-	// 1. Подготовим состояние вывода
-	struct wlr_output_state state;
-	wlr_output_state_init(&state);
-
-	// 4. Создаём render_pass
-	struct wlr_buffer_pass_options pass_opts = {
-		// Можно добавить .damaged, если есть damage tracking
+void dummy_draw_frame(struct wl_listener * listener, void * data, union wlkit_object * object) {
+	struct wlkit_render * render = object->render;
+	struct wlr_render_rect_options rect_opts = {
+		.box = { 0, 0, 100, 100 },
+		.color = { 1.0f, 0.0f, 0.0f, 1.0f },
 	};
-	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, &state, &pass_opts);
-	if (!pass) {
-		wlr_log(WLR_ERROR, "Failed to begin render pass");
-		// wlr_buffer_drop(buffer);
-		goto cleanup;
-	}
+	wlr_render_pass_add_rect(render->pass, &rect_opts);
+}
+
+void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_object * object) {
+	struct wlkit_render * render = object->render;
+	struct wlkit_output * output = render->output;
+	struct wlr_output * wlr_output = output->wlr_output;
+	struct wlr_render_pass * pass = render->pass;
 
 	// 5. Добавим заливку (фон)
 	struct wlr_render_rect_options rect_opts = {
@@ -65,12 +58,14 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 		},
 		.color = { 0.48828125f, 0.5f, 0.71875f, 1.0f },
 	};
-	wlr_render_pass_add_rect(pass, &rect_opts);
+	wlr_render_pass_add_rect(render->pass, &rect_opts);
 
 	// Получаем время для анимации
 	time_t now = time(NULL);
 	struct tm *tm = localtime(&now);
-	if (!tm) goto cleanup;
+	if (!tm) {
+		return;
+	};
 
 	// Общее время в секундах с начала минуты для плавной анимации
 	float time_sec = tm->tm_sec + (float)(clock() % CLOCKS_PER_SEC) / CLOCKS_PER_SEC;
@@ -88,7 +83,7 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 		},
 		.color = { bg_r, bg_g, bg_b, 1.0f },
 	};
-	wlr_render_pass_add_rect(pass, &bg_opts);
+	wlr_render_pass_add_rect(render->pass, &bg_opts);
 
 	// 4. Анимированные круги (имитация)
 	int center_x = wlr_output->width / 2;
@@ -134,7 +129,7 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 			},
 			.color = { r, g, b, 0.8f },
 		};
-		wlr_render_pass_add_rect(pass, &circle_opts);
+		wlr_render_pass_add_rect(render->pass, &circle_opts);
 	}
 
 	// 5. Волновой эффект внизу
@@ -156,7 +151,7 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 			},
 			.color = { 0.2f + wave_intensity * 0.6f, 0.6f, 1.0f, 0.7f },
 		};
-		wlr_render_pass_add_rect(pass, &wave_opts);
+		wlr_render_pass_add_rect(render->pass, &wave_opts);
 	}
 
 	// 6. Цифровые часы в центре
@@ -171,7 +166,7 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 		},
 		.color = { 0.0f, 0.0f, 0.0f, 0.7f },
 	};
-	wlr_render_pass_add_rect(pass, &clock_bg_opts);
+	wlr_render_pass_add_rect(render->pass, &clock_bg_opts);
 
 	// 7. Простая визуализация времени через полоски
 	// Часы (0-23)
@@ -186,7 +181,7 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 			},
 			.color = { 1.0f, 0.2f, 0.2f, 0.9f },
 		};
-		wlr_render_pass_add_rect(pass, &hour_opts);
+		wlr_render_pass_add_rect(render->pass, &hour_opts);
 	}
 
 	// Минуты (0-59)
@@ -201,7 +196,7 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 			},
 			.color = { 0.2f, 1.0f, 0.2f, 0.9f },
 		};
-		wlr_render_pass_add_rect(pass, &min_opts);
+		wlr_render_pass_add_rect(render->pass, &min_opts);
 	}
 
 	// Секунды (0-59)
@@ -216,7 +211,7 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 			},
 			.color = { 0.2f, 0.2f, 1.0f, 0.9f },
 		};
-		wlr_render_pass_add_rect(pass, &sec_opts);
+		wlr_render_pass_add_rect(render->pass, &sec_opts);
 	}
 
 	// 8. Частицы в углах
@@ -240,29 +235,9 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_
 				},
 				.color = { 1.0f, 1.0f, 1.0f, 0.6f },
 			};
-			wlr_render_pass_add_rect(pass, &particle_opts);
+			wlr_render_pass_add_rect(render->pass, &particle_opts);
 		}
 	}
-
-	// 6. Нарисуем курсоры поверх
-	wlr_output_add_software_cursors_to_render_pass(wlr_output, pass, NULL);
-
-	// 7. Завершаем рендер
-	if (!wlr_render_pass_submit(pass)) {
-		wlr_log(WLR_ERROR, "Failed to submit render pass");
-		// wlr_buffer_drop(buffer);
-		goto cleanup;
-	}
-
-	// 9. Коммитим
-	if (!wlr_output_commit_state(wlr_output, &state)) {
-		wlr_log(WLR_ERROR, "Failed to commit output");
-	}
-
-	wlr_output_schedule_frame(wlr_output);
-
-cleanup:
-	wlr_output_state_finish(&state);
 }
 
 void setup_output_mode(struct wl_listener * listener, void * data, union wlkit_object * object) {
@@ -284,6 +259,7 @@ void setup_output_mode(struct wl_listener * listener, void * data, union wlkit_o
 }
 
 void setup_draw(struct wl_listener * listener, void * data, union wlkit_object * object) {
+	// wlkit_on_output_frame(object->output, dummy_draw_frame);
 	wlkit_on_output_frame(object->output, ai_test_draw_frame);
 }
 

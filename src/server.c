@@ -133,12 +133,17 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	server->backend = wlr_backend_autocreate(server->event_loop, &server->session);
 	if (!server->backend) {
 		wlr_log(WLR_ERROR, "Unable to create wlkit backend");
+		wl_event_loop_destroy(server->event_loop);
+		free(server);
 		return NULL;
 	}
 
 	server->renderer = wlr_renderer_autocreate(server->backend);
 	if (!server->renderer) {
 		wlr_log(WLR_ERROR, "Unable to create wlkit renderer");
+		wlr_backend_destroy(server->backend);
+		wl_event_loop_destroy(server->event_loop);
+		free(server);
 		return NULL;
 	}
 
@@ -147,6 +152,10 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	server->allocator = wlr_allocator_autocreate(server->backend, server->renderer);
 	if (!server->allocator) {
 		wlr_log(WLR_ERROR, "Unable to create wlkit allocator");
+		wlr_renderer_destroy(server->renderer);
+		wlr_backend_destroy(server->backend);
+		wl_event_loop_destroy(server->event_loop);
+		free(server);
 		return NULL;
 	}
 

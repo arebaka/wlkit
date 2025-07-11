@@ -15,14 +15,14 @@ struct wlkit_output_handler {
 };
 
 struct wlkit_output {
+	struct wl_list link;
+
 	struct wlkit_server * server;
 	struct wlr_output * wlr_output;
 	struct wlr_scene_output * scene_output;
-
 	struct wl_event_source * repaint_timer;
 
 	struct timespec last_frame;
-	struct wl_list link;
 
 	struct {
 		struct wl_listener layout_destroy;

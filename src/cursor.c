@@ -7,7 +7,7 @@ static void handle_axis(struct wl_listener * listener, void * data) {};
 static void handle_frame(struct wl_listener * listener, void * data) {};
 
 struct wlkit_cursor * wlkit_cursor_create(struct wlkit_root * root, char * name, wlkit_cursor_size size) {
-	if (!root) {
+	if (!root || !root->output_layout) {
 		return NULL;
 	}
 
@@ -37,4 +37,14 @@ struct wlkit_cursor * wlkit_cursor_create(struct wlkit_root * root, char * name,
 	cursor->user_data = NULL;
 
 	return cursor;
+}
+
+void wlkit_cursor_destroy(struct wlkit_cursor * cursor) {
+	if (!cursor) {
+		return;
+	}
+
+	wlr_cursor_destroy(cursor->cursor);
+	wlr_xcursor_manager_destroy(cursor->xcursor_manager);
+	free(cursor);
 }
