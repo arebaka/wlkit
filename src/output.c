@@ -14,9 +14,7 @@ static void handle_frame(struct wl_listener * listener, void * data) {
 		return;
 	}
 
-	struct wlr_buffer_pass_options pass_opts = {
-		//.damaged = ;
-	};
+	struct wlr_buffer_pass_options pass_opts = {};
 	struct wlkit_render * render = wlkit_render_create(output, &pass_opts);
 
 	union wlkit_object object = { .render = render };

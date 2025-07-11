@@ -15,7 +15,7 @@ struct wlkit_root {
 	struct wlr_scene_tree * staging;
 	struct wlr_scene_tree * layer_tree;
 
-	wlkit_geo x, y, width, height;
+	wlkit_geo_t x, y, width, height;
 
 	struct wlkit_cursor * cursor;
 

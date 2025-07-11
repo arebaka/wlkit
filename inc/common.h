@@ -13,9 +13,9 @@
 #include <wlr/util/log.h>
 
 typedef uint32_t wlkit_workspace_id;
-typedef uint32_t wlkit_screen_request_id;
 typedef uint32_t wlkit_node_id;
-typedef uint32_t wlkit_geo;
+typedef uint32_t wlkit_geo_t;
+typedef uint32_t wlkit_screen_request_id;
 
 struct wlkit_server;
 struct wlkit_output;
