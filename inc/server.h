@@ -117,7 +117,6 @@ struct wlkit_server {
 		struct wl_list new_output;
 		struct wl_list new_input;
 		struct wl_list new_xdg_surface;
-		struct wl_list output_frame;
 	} handlers;
 
 	const char * socket;
@@ -169,11 +168,6 @@ void wlkit_on_run(
 );
 
 void wlkit_on_new_output(
-	struct wlkit_server * server,
-	wlkit_notify_handler_t handler
-);
-
-void wlkit_on_output_frame(
 	struct wlkit_server * server,
 	wlkit_notify_handler_t handler
 );

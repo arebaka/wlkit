@@ -9,6 +9,8 @@ struct wlkit_node * wlkit_node_create() {
 
 	static wlkit_node_id next_id = 0;
 	node->id = ++next_id;
+	node->user_data = NULL;
+
 	return node;
 }
 

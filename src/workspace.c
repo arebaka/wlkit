@@ -8,7 +8,7 @@ struct wlkit_workspace * wlkit_workspace_create(
 	wlkit_workspace_id id,
 	const char * name
 ) {
-	if (!server) {
+	if (!server || !layout) {
 		return NULL;
 	}
 
@@ -23,6 +23,7 @@ struct wlkit_workspace * wlkit_workspace_create(
 	workspace->id = id;
 	workspace->name = strdup(name ? name : "");
 	workspace->focused_window = NULL;
+	workspace->user_data = NULL;
 
 	wl_list_init(&workspace->windows);
 

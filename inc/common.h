@@ -30,7 +30,18 @@ struct wlkit_keyboard_manager;
 struct wlkit_focus_manager;
 struct wlkit_portal_manager;
 
-typedef void (*wlkit_notify_handler_t)(struct wl_listener * listener, void * data, struct wlkit_server * server);
+union wlkit_object {
+	struct wlkit_server;
+	struct wlkit_output;
+	struct wlkit_root;
+	struct wlkit_workspace;
+	struct wlkit_layout;
+	struct wlkit_window;
+	struct wlkit_node;
+	struct wlkit_cursor;
+};
+
+typedef void (*wlkit_notify_handler_t)(struct wl_listener * listener, void * data, union wlkit_object * new_object);
 struct wlkit_notify_handler {
 	struct wl_list link;
 	wlkit_notify_handler_t handler;

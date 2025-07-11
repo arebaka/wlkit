@@ -4,7 +4,15 @@
 #include "common.h"
 
 #include <wayland-server-core.h>
+#include <wayland-util.h>
 #include <wlr/types/wlr_output.h>
+
+struct wlkit_output;
+typedef void (*wlkit_output_handler_t)(struct wlkit_server * server);
+struct wlkit_output_handler {
+	struct wl_list link;
+	wlkit_output_handler_t handler;
+};
 
 struct wlkit_output {
 	struct wlkit_server * server;
@@ -24,13 +32,31 @@ struct wlkit_output {
 		struct wl_listener request_state;
 	} listeners;
 
+	struct {
+		struct wl_list create;
+		struct wl_list destroy;
+		struct wl_list layout_destroy;
+		struct wl_list frame;
+		struct wl_list present;
+		struct wl_list request_state;
+		struct wl_list repaint_timer;
+	} handlers;
+
 	void * user_data;
 };
 
 struct wlkit_output * wlkit_output_create(
 	struct wlkit_server * server,
-	struct wlr_output * wlr_output,
-	struct wlr_scene_output * scene_output
+	struct wlr_output * wlr_output
+);
+
+void wlkit_output_destroy(
+	struct wlkit_output * output
+);
+
+void wlkit_on_output_frame(
+	struct wlkit_output * output,
+	wlkit_notify_handler_t handler
 );
 
 #endif // WLKIT_OUTPUT_H

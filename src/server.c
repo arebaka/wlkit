@@ -6,73 +6,21 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_subcompositor.h>
 
-static void handle_lauout_destroy(struct wl_listener * listener, void * data) {
-}
-
-static void handle_output_frame(struct wl_listener * listener, void * data) {
-	struct wlkit_output * output = wl_container_of(listener, output, listeners.frame);
-	struct wlkit_server * server = output->server;
-
-	struct wlkit_notify_handler * wrapper;
-	wl_list_for_each(wrapper, &server->handlers.output_frame, link) {
-		wrapper->handler(listener, data, server);
-	}
-}
-
-static void handle_output_destroy(struct wl_listener * listener, void * data) {
-}
-
-static void handle_output_present(struct wl_listener * listener, void * data) {
-}
-
-static void handle_output_request_state(struct wl_listener * listener, void * data) {
-}
-
-static int handle_output_repaint_timer(void * data) {
-}
-
 static void handle_new_output(struct wl_listener * listener, void * data) {
 	struct wlkit_server * server = wl_container_of(listener, server, listeners.new_output);
 	struct wlr_output * wlr_output = data;
 
-	struct wlr_scene_output * scene_output = wlr_scene_output_create(server->root->scene, wlr_output);
-	if (!scene_output) {
-		wlr_log(WLR_ERROR, "Failed to create a wlkit scene output");
-		return;
-	}
-
-	struct wlkit_output * output = wlkit_output_create(server, wlr_output, scene_output);
+	struct wlkit_output * output = wlkit_output_create(server, wlr_output);
 	if (!output) {
 		wlr_log(WLR_ERROR, "Failed to create a wlkit output");
-		wlr_scene_output_destroy(scene_output);
 		return;
 	}
-
-	if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer)) {
-		wlr_log(WLR_ERROR, "Failed to init wlkit output render");
-		return;
-	}
-
-	wl_signal_add(&server->root->output_layout->events.destroy, &output->listeners.layout_destroy);
-	output->listeners.layout_destroy.notify = handle_lauout_destroy;
-	wl_signal_add(&wlr_output->events.frame, &output->listeners.frame);
-	output->listeners.frame.notify = handle_output_frame;
-	wl_signal_add(&wlr_output->events.destroy, &output->listeners.destroy);
-	output->listeners.destroy.notify = handle_output_destroy;
-	wl_signal_add(&wlr_output->events.present, &output->listeners.present);
-	output->listeners.present.notify = handle_output_present;
-	wl_signal_add(&wlr_output->events.request_state, &output->listeners.request_state);
-	output->listeners.request_state.notify = handle_output_request_state;
-
-	output->repaint_timer = wl_event_loop_add_timer(server->event_loop, handle_output_repaint_timer, output);
-
-	wlr_output_layout_add_auto(server->root->output_layout, wlr_output);
-	wl_list_insert(&server->outputs, &output->link);
 
 	struct wlkit_notify_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.new_output, link) {
-		wrapper->handler(listener, data, server);
+		wrapper->handler(listener, data, (union wlkit_object*) server);
 	}
+
 }
 
 static void handle_new_input(struct wl_listener * listener, void * data) {
@@ -165,6 +113,8 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 
 	server->display = display;
 	server->seat = seat;
+	server->running = false;
+	server->user_data = NULL;
 
 	wl_list_init(&server->handlers.create);
 	wl_list_init(&server->handlers.destroy);
@@ -266,10 +216,8 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 
 	server->listeners.new_output.notify = handle_new_output;
 	wl_signal_add(&server->backend->events.new_output, &server->listeners.new_output);
-
 	server->listeners.new_input.notify = handle_new_input;
 	wl_signal_add(&server->backend->events.new_input, &server->listeners.new_input);
-
 	server->listeners.new_xdg_surface.notify = handle_new_xdg_surface;
 	wl_signal_add(&server->xdg_shell->events.new_surface, &server->listeners.new_xdg_surface);
 
@@ -277,10 +225,6 @@ struct wlkit_server * wlkit_create(struct wl_display * display, struct wlr_seat 
 	wl_list_init(&server->handlers.new_output);
 	wl_list_init(&server->handlers.new_input);
 	wl_list_init(&server->handlers.new_xdg_surface);
-	wl_list_init(&server->handlers.output_frame);
-
-	server->running = false;
-	server->user_data = NULL;
 
 	struct wlkit_server_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.create, link) {
@@ -391,7 +335,3 @@ void wlkit_on_stop(struct wlkit_server * server, wlkit_server_handler_t handler)
 void wlkit_on_new_output(struct wlkit_server * server, wlkit_notify_handler_t handler) {
 	wlkit_assume_notify_handler(&server->handlers.new_output, handler);
 }
-
-void wlkit_on_output_frame(struct wlkit_server * server, wlkit_notify_handler_t handler) {
-	wlkit_assume_notify_handler(&server->handlers.output_frame, handler);
-};

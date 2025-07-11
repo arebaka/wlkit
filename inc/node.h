@@ -26,6 +26,8 @@ struct wlkit_node {
 	struct {
 		struct wl_signal destroy;
 	} events;
+
+	void * user_data;
 };
 
 struct wlkit_node * wlkit_node_create();

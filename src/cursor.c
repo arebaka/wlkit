@@ -34,5 +34,7 @@ struct wlkit_cursor * wlkit_cursor_create(struct wlkit_root * root, char * name,
 	cursor->listeners.frame.notify = handle_frame;
 	wl_signal_add(&cursor->cursor->events.frame, &cursor->listeners.frame);
 
+	cursor->user_data = NULL;
+
 	return cursor;
 }

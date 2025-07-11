@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <wayland-server-core.h>
 #include <wlkit/server.h>
 #include <wlkit/wlkit.h>
 
@@ -32,32 +33,11 @@ void create_default_workspace(struct wlkit_server * server) {
 	server->current_workspace = wlkit_workspace_create(server, &wlkit_layout_floating, 1, "default");
 }
 
-void setup_output_mode(struct wl_listener * listener, void * data, struct wlkit_server * server) {
-	struct wlr_output * wlr_output = data;
-
-	struct wlr_output_state state;
-	wlr_output_state_init(&state);
-	wlr_output_state_set_enabled(&state, true);
-	wlr_output_state_set_scale(&state, 1.0f);
-	wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_NORMAL);
-
-	struct wlr_output_mode * mode = wlr_output_preferred_mode(wlr_output);
-	if (mode) {
-		wlr_output_state_set_mode(&state, mode);
-	}
-
-	wlr_output_commit_state(wlr_output, &state);
-	wlr_output_state_finish(&state);
-}
-
-void ai_test_draw_frame(struct wl_listener * listener, void * data, struct wlkit_server * server) {
-	struct wlkit_output * output = wl_container_of(listener, output, listeners.frame);
+void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_object * object) {
+	struct wlkit_output * output = (struct wlkit_output*) object;
 	struct wlr_output * wlr_output = output->wlr_output;
-	struct wlr_allocator * allocator = server->allocator;
-	struct wlr_renderer * renderer = server->renderer;
-
-	if (!wlr_output || !allocator || !renderer) {
-		wlr_log(WLR_ERROR, "Invalid output, allocator, or renderer");
+	if (!wlr_output) {
+		wlr_log(WLR_ERROR, "Invalid output");
 		return;
 	}
 
@@ -285,6 +265,28 @@ cleanup:
 	wlr_output_state_finish(&state);
 }
 
+void setup_output_mode(struct wl_listener * listener, void * data, union wlkit_object * output) {
+	struct wlr_output * wlr_output = data;
+
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
+	wlr_output_state_set_enabled(&state, true);
+	wlr_output_state_set_scale(&state, 1.0f);
+	wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_NORMAL);
+
+	struct wlr_output_mode * mode = wlr_output_preferred_mode(wlr_output);
+	if (mode) {
+		wlr_output_state_set_mode(&state, mode);
+	}
+
+	wlr_output_commit_state(wlr_output, &state);
+	wlr_output_state_finish(&state);
+}
+
+void setup_draw(struct wl_listener * listener, void * data, union wlkit_object * output) {
+	wlkit_on_output_frame((struct wlkit_output*) output, ai_test_draw_frame);
+}
+
 int main() {
 	struct wl_display * display = wl_display_create();
 	struct wlr_seat * seat = wlr_seat_create(display, "seat0");
@@ -293,8 +295,8 @@ int main() {
 
 	wlkit_on_destroy(server, on_destroy);
 	wlkit_on_start(server, create_default_workspace);
+	wlkit_on_new_output(server, setup_draw);
 	wlkit_on_new_output(server, setup_output_mode);
-	wlkit_on_output_frame(server, ai_test_draw_frame);
 
 	wlkit_start(server);
 

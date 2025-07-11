@@ -3,6 +3,10 @@
 #include <wlkit/wlkit.h>
 
 struct wlkit_root * wlkit_root_create(struct wlkit_server * server) {
+	if (!server) {
+		return NULL;
+	}
+
 	struct wlkit_root * root = malloc(sizeof(*root));
 	if (!root) {
 		wlr_log(WLR_ERROR, "Unable to allocate wlkit root");
@@ -48,6 +52,7 @@ struct wlkit_root * wlkit_root_create(struct wlkit_server * server) {
 	root->y = 0;
 	root->width = 0;
 	root->height = 0;
+	root->user_data = NULL;
 
 	root->cursor = wlkit_cursor_create(root, NULL, 24);
 
