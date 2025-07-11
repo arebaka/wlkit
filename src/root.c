@@ -1,5 +1,6 @@
 #include "wlkit.h"
 #include <wayland-util.h>
+#include <wlkit/node.h>
 #include <wlkit/wlkit.h>
 
 struct wlkit_root * wlkit_root_create(struct wlkit_server * server) {
@@ -23,7 +24,8 @@ struct wlkit_root * wlkit_root_create(struct wlkit_server * server) {
 	root->server = server;
 
 	root->node = wlkit_node_create();
-	wlkit_node_init(root->node, WLKIT_NODE_ROOT, (union wlkit_node_object) root);
+	union wlkit_node_object object = { .root = root };
+	wlkit_node_init(root->node, WLKIT_NODE_ROOT, &object);
 
 	root->output_layout = wlr_output_layout_create(server->display);
 	if (!root->output_layout) {

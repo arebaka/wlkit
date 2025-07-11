@@ -31,17 +31,17 @@ struct wlkit_focus_manager;
 struct wlkit_portal_manager;
 
 union wlkit_object {
-	struct wlkit_server;
-	struct wlkit_output;
-	struct wlkit_root;
-	struct wlkit_workspace;
-	struct wlkit_layout;
-	struct wlkit_window;
-	struct wlkit_node;
-	struct wlkit_cursor;
+	struct wlkit_server * server;
+	struct wlkit_output * output;
+	struct wlkit_root * root;
+	struct wlkit_workspace * workspace;
+	struct wlkit_layout * layout;
+	struct wlkit_window * window;
+	struct wlkit_node * node;
+	struct wlkit_cursor * cursor;
 };
 
-typedef void (*wlkit_notify_handler_t)(struct wl_listener * listener, void * data, union wlkit_object * new_object);
+typedef void (*wlkit_notify_handler_t)(struct wl_listener * listener, void * data, union wlkit_object * object);
 struct wlkit_notify_handler {
 	struct wl_list link;
 	wlkit_notify_handler_t handler;

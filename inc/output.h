@@ -8,7 +8,7 @@
 #include <wlr/types/wlr_output.h>
 
 struct wlkit_output;
-typedef void (*wlkit_output_handler_t)(struct wlkit_server * server);
+typedef void (*wlkit_output_handler_t)(struct wlkit_output * output);
 struct wlkit_output_handler {
 	struct wl_list link;
 	wlkit_output_handler_t handler;

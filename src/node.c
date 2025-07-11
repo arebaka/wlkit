@@ -10,6 +10,7 @@ struct wlkit_node * wlkit_node_create() {
 	static wlkit_node_id next_id = 0;
 	node->id = ++next_id;
 	node->user_data = NULL;
+	node->object = NULL;
 
 	return node;
 }
@@ -20,7 +21,7 @@ void wlkit_node_destroy(struct wlkit_node * node) {
 	}
 }
 
-void wlkit_node_init(struct wlkit_node * node, enum wlkit_node_type type, union wlkit_node_object object) {
+void wlkit_node_init(struct wlkit_node * node, enum wlkit_node_type type, union wlkit_node_object * object) {
 	node->type = type;
 	node->object = object;
 	wl_signal_init(&node->events.destroy);

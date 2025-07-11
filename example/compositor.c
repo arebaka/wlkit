@@ -34,7 +34,7 @@ void create_default_workspace(struct wlkit_server * server) {
 }
 
 void ai_test_draw_frame(struct wl_listener * listener, void * data, union wlkit_object * object) {
-	struct wlkit_output * output = (struct wlkit_output*) object;
+	struct wlkit_output * output = object->output;
 	struct wlr_output * wlr_output = output->wlr_output;
 	if (!wlr_output) {
 		wlr_log(WLR_ERROR, "Invalid output");
@@ -265,7 +265,7 @@ cleanup:
 	wlr_output_state_finish(&state);
 }
 
-void setup_output_mode(struct wl_listener * listener, void * data, union wlkit_object * output) {
+void setup_output_mode(struct wl_listener * listener, void * data, union wlkit_object * object) {
 	struct wlr_output * wlr_output = data;
 
 	struct wlr_output_state state;
@@ -283,8 +283,8 @@ void setup_output_mode(struct wl_listener * listener, void * data, union wlkit_o
 	wlr_output_state_finish(&state);
 }
 
-void setup_draw(struct wl_listener * listener, void * data, union wlkit_object * output) {
-	wlkit_on_output_frame((struct wlkit_output*) output, ai_test_draw_frame);
+void setup_draw(struct wl_listener * listener, void * data, union wlkit_object * object) {
+	wlkit_on_output_frame(object->output, ai_test_draw_frame);
 }
 
 int main() {

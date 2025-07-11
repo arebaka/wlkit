@@ -19,7 +19,7 @@ union wlkit_node_object {
 
 struct wlkit_node {
 	enum wlkit_node_type type;
-	union wlkit_node_object object;
+	union wlkit_node_object * object;
 
 	wlkit_node_id id;
 
@@ -39,7 +39,7 @@ void wlkit_node_destroy(
 void wlkit_node_init(
 	struct wlkit_node * node,
 	enum wlkit_node_type type,
-	union wlkit_node_object object
+	union wlkit_node_object * object
 );
 
 struct wlr_scene_tree * wlkit_alloc_scene_tree(

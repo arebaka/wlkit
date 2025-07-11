@@ -10,9 +10,10 @@ static void handle_frame(struct wl_listener * listener, void * data) {
 	struct wlkit_output * output = wl_container_of(listener, output, listeners.frame);
 	struct wlkit_server * server = output->server;
 
+	union wlkit_object object = { .output = output };
 	struct wlkit_notify_handler * wrapper;
 	wl_list_for_each(wrapper, &output->handlers.frame, link) {
-		wrapper->handler(listener, data, (union wlkit_object*) output);
+		wrapper->handler(listener, data, &object);
 	}
 }
 
@@ -84,7 +85,7 @@ struct wlkit_output * wlkit_output_create(
 
 	struct wlkit_output_handler * wrapper;
 	wl_list_for_each(wrapper, &output->handlers.create, link) {
-		wrapper->handler(server);
+		wrapper->handler(output);
 	}
 
 	return output;
@@ -96,7 +97,7 @@ void wlkit_output_destroy(struct wlkit_output * output) {
 }
 
 static void assume_handler(struct wl_list * handlers, wlkit_output_handler_t handler) {
-	struct wlkit_server_handler * wrapper = malloc(sizeof(*wrapper));
+	struct wlkit_output_handler * wrapper = malloc(sizeof(*wrapper));
 	wrapper->handler = handler;
 	wl_list_insert(handlers, &wrapper->link);
 }

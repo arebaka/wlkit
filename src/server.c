@@ -16,9 +16,10 @@ static void handle_new_output(struct wl_listener * listener, void * data) {
 		return;
 	}
 
+	union wlkit_object object = { .output = output };
 	struct wlkit_notify_handler * wrapper;
 	wl_list_for_each(wrapper, &server->handlers.new_output, link) {
-		wrapper->handler(listener, data, (union wlkit_object*) server);
+		wrapper->handler(listener, data, &object);
 	}
 
 }
