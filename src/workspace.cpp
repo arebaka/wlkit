@@ -3,8 +3,8 @@
 
 using namespace wlkit;
 
-Workspace::Workspace(Server & server, Layout & layout, ID id, const char * name, const Handler & callback):
-_server(&server), _layout(&layout), _id(id) {
+Workspace::Workspace(Server * server, Layout * layout, ID id, const char * name, const Handler & callback):
+_server(server), _layout(layout), _id(id) {
 	_name = strdup(name ? name : "");
 	_focused_window = nullptr;
 	_data = nullptr;

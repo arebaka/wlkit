@@ -1,13 +1,14 @@
-#include "wlkit.hpp"
-
-extern "C" {
-#include <wlr/render/pass.h>
-}
+#include "output.hpp"
+#include "server.hpp"
+#include "root.hpp"
+#include "workspace.hpp"
+#include "render.hpp"
+#include "window.hpp"
 
 using namespace wlkit;
 
-Output::Output(Server & server, struct wlr_output & wlr_output, const Handler & callback):
-_server(&server), _wlr_output(&wlr_output), _current_workspace(nullptr), _data(nullptr) {
+Output::Output(Server * server, struct wlr_output * wlr_output, const Handler & callback):
+_server(server), _wlr_output(wlr_output), _current_workspace(nullptr), _data(nullptr) {
 	if (!_server || !_wlr_output) {
 		// TODO error
 	}
@@ -275,7 +276,7 @@ void Output::_handle_frame(struct wl_listener * listener, void * data) {
 	}
 
 	struct wlr_buffer_pass_options pass_opts{};
-	auto render = new Render(*output, pass_opts, nullptr);
+	auto render = new Render(output, &pass_opts, nullptr);
 
 	Object object{ .render = render };
 	for (auto & cb : output->_on_frame) {

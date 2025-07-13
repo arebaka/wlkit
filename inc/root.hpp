@@ -16,10 +16,10 @@ public:
 private:
 	Server * _server;
 
-	struct wlr_scene * _scene;
-	struct wlr_output_layout * _output_layout;
-	struct wlr_scene_tree * _staging;
-	struct wlr_scene_tree * _layer_tree;
+	struct ::wlr_scene * _scene;
+	struct ::wlr_output_layout * _output_layout;
+	struct ::wlr_scene_tree * _staging;
+	struct ::wlr_scene_tree * _layer_tree;
 
 	Geo _x, _y, _width, _height;
 	Node * _node;
@@ -35,7 +35,7 @@ private:
 
 public:
 	Root(
-		Server & server,
+		Server * server,
 		char * cursor_name,
 		const Cursor::Size & cursor_size,
 		const Handler & callback);

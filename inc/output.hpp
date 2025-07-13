@@ -60,11 +60,11 @@ public:
 
 private:
 	Server * _server;
-	struct wlr_output * _wlr_output;
+	struct ::wlr_output * _wlr_output;
 
-	struct wlr_scene_output * _scene_output;
-	struct wl_event_source * _repaint_timer;
-	struct wlr_output_state * _state;
+	struct ::wlr_scene_output * _scene_output;
+	struct ::wl_event_source * _repaint_timer;
+	struct ::wlr_output_state * _state;
 
 	struct timespec _last_frame;
 	Workspace * _current_workspace;
@@ -81,8 +81,8 @@ private:
 
 public:
 	Output(
-		Server & server,
-		struct wlr_output & wlr_output,
+		Server * server,
+		struct wlr_output * wlr_output,
 		const Handler & callback);
 	~Output();
 

@@ -12,9 +12,20 @@ class Input {
 public:
 	typedef std::function<void(Input&)> Handler;
 
-private:
+	enum class Type {
+		KEYBOARD,
+		POINTER,
+		TOUCH,
+		TABLET,
+		TABLET_PAD,
+		SWITCH
+	};
+
+protected:
 	Server * _server;
-	struct wlr_input_device * _device;
+	const Type _type;
+	struct ::wlr_input_device * _device;
+
 	void * _data;
 
 	std::list<Handler> _on_create;
@@ -24,10 +35,11 @@ private:
 
 public:
 	Input(
-		Server & server,
-		struct wlr_input_device * device,
+		Server * server,
+		const Type & type,
+		struct ::wlr_input_device * device,
 		const Handler & callback);
-	~Input();
+	virtual ~Input();
 
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] struct wlr_input_device * device() const;
@@ -37,7 +49,7 @@ public:
 
 	Input & on_destroy(const Handler & handler);
 
-private:
+protected:
 	static void _handle_destroy(struct wl_listener * listener, void * data);
 };
 

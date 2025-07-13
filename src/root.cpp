@@ -4,13 +4,9 @@
 #include "node.hpp"
 #include "cursor.hpp"
 
-extern "C" {
-#include <wlr/types/wlr_output_layout.h>
-}
-
 using namespace wlkit;
 
-struct wlr_scene_tree * alloc_scene_tree(struct wlr_scene_tree * parent, bool * failed) {
+static struct wlr_scene_tree * alloc_scene_tree(struct wlr_scene_tree * parent, bool * failed) {
 	if (*failed) {
 		return nullptr;
 	}
@@ -23,8 +19,8 @@ struct wlr_scene_tree * alloc_scene_tree(struct wlr_scene_tree * parent, bool * 
 	return tree;
 }
 
-Root::Root(Server & server, char * cursor_name, const Cursor::Size & cursor_size, const Handler & callback):
-_server(&server), _x(0), _y(0), _width(0), _height(0), _data(nullptr) {
+Root::Root(Server * server, char * cursor_name, const Cursor::Size & cursor_size, const Handler & callback):
+_server(server), _x(0), _y(0), _width(0), _height(0), _data(nullptr) {
 	if (!_server || !_server->display()) {
 		// TODO error
 	}
@@ -49,11 +45,11 @@ _server(&server), _x(0), _y(0), _width(0), _height(0), _data(nullptr) {
 	_destroy_listener.notify = _handle_destroy;
 	wl_signal_add(&_output_layout->events.destroy, &_destroy_listener);
 
-	Node::NodeObject object = { .root = this };
-	_node = new Node(Node::ROOT, object, nullptr);
+	Node::NodeObject object{ .root = this };
+	_node = new Node(Node::ROOT, &object, nullptr);
 	_node->init();
 
-	_cursor = new Cursor(*this, *cursor_name, cursor_size, nullptr);
+	_cursor = new Cursor(this, cursor_name, cursor_size, nullptr);
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));

@@ -2,15 +2,16 @@
 #include "output.hpp"
 #include "root.hpp"
 
+#include "device/keyboard.hpp"
+
 extern "C" {
 #include <wlr/types/wlr_subcompositor.h>
-#include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 }
 
 using namespace wlkit;
 
-Server::Server(struct wl_display & display, struct wlr_seat & seat, const Handler & callback):
-_display(&display), _seat(&seat), _running(false), _data(nullptr) {
+Server::Server(struct wl_display * display, struct wlr_seat * seat, const Handler & callback):
+_display(display), _seat(seat), _running(false), _data(nullptr) {
 	if (!_display || !_seat) {
 		// TODO error
 	}
@@ -43,7 +44,7 @@ _display(&display), _seat(&seat), _running(false), _data(nullptr) {
 	wl_signal_add(&_allocator->events.destroy, &_destroy_listener);
 	wl_signal_add(&_compositor->events.destroy, &_destroy_listener);
 
-	_root = new Root(*this, nullptr, 24, nullptr);  // TODO from config
+	_root = new Root(this, nullptr, 24, nullptr);  // TODO from config
 
 	_xdg_shell = wlr_xdg_shell_create(_display, 5);
 	_new_xdg_shell_toplevel_listener.notify = _handle_new_xdg_shell_toplevel;
@@ -278,10 +279,10 @@ void Server::_handle_new_output(struct wl_listener * listener, void * data) {
 	Server * server = wl_container_of(listener, server, _new_output_listener);
 	auto wlr_output = static_cast<struct wlr_output*>(data);
 
-	auto output = new Output(*server, *wlr_output, nullptr);
+	auto output = new Output(server, wlr_output, nullptr);
 	server->_outputs.push_back(output);
 
-	Object object = { .output = output };
+	Object object{ .output = output };
 	for (auto & cb : server->_on_new_output) {
 		cb(listener, data, object);
 	}
@@ -294,47 +295,32 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 	wlr_seat_set_capabilities(server->seat(),
 		WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_TOUCH);
 
-	// auto input = new Input(*server, *device, nullptr);
-	// server->_inputs.push_back(input);
+	Input * input;
 
-	// Object object = { .input = input };
-	// for (auto & cb : server->_on_new_input) {
-	// 	cb(listener, data, object);
-	// }
+	switch (device->type) {
+	case WLR_INPUT_DEVICE_KEYBOARD:
+		input = new Keyboard(server, device, nullptr);
+		break;
+	case WLR_INPUT_DEVICE_POINTER:
+		break;
+	case WLR_INPUT_DEVICE_TOUCH:
+		break;
+	case WLR_INPUT_DEVICE_TABLET:
+		break;
+	case WLR_INPUT_DEVICE_TABLET_PAD:
+		break;
+	case WLR_INPUT_DEVICE_SWITCH:
+		break;
+	default:
+		return;
+	}
 
-	// switch (device->type) {
-	// case WLR_INPUT_DEVICE_KEYBOARD:;
-	//	 struct sample_keyboard *keyboard = calloc(1, sizeof(struct sample_keyboard));
-	//	 keyboard->device = device;
-	//	 keyboard->sample = sample;
-	//	 wl_signal_add(&device->events.destroy, &keyboard->destroy);
-	//	 keyboard->destroy.notify = keyboard_destroy_notify;
-	//	 wl_signal_add(&device->keyboard->events.key, &keyboard->key);
-	//	 keyboard->key.notify = keyboard_key_notify;
-	//	 struct xkb_rule_names rules = { 0 };
-	//	 rules.rules = getenv("XKB_DEFAULT_RULES");
-	//	 rules.model = getenv("XKB_DEFAULT_MODEL");
-	//	 rules.layout = getenv("XKB_DEFAULT_LAYOUT");
-	//	 rules.variant = getenv("XKB_DEFAULT_VARIANT");
-	//	 rules.options = getenv("XKB_DEFAULT_OPTIONS");
-	//	 struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-	//	 if (!context) {
-	//		 wlr_log(WLR_ERROR, "Failed to create XKB context");
-	//		 exit(1);
-	//	 }
-	//	 struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules,
-	//		 XKB_KEYMAP_COMPILE_NO_FLAGS);
-	//	 if (!keymap) {
-	//		 wlr_log(WLR_ERROR, "Failed to create XKB keymap");
-	//		 exit(1);
-	//	 }
-	//	 wlr_keyboard_set_keymap(device->keyboard, keymap);
-	//	 xkb_keymap_unref(keymap);
-	//	 xkb_context_unref(context);
-	//	 break;
-	// default:
-	//	 break;
-	// }
+	server->_inputs.push_back(input);
+
+	Object object{ .input = input };
+	for (auto & cb : server->_on_new_input) {
+		cb(listener, data, object);
+	}
 }
 
 void Server::_handle_new_xdg_surface(struct wl_listener * listener, void * data) {

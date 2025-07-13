@@ -2,8 +2,8 @@
 
 using namespace wlkit;
 
-Node::Node(const Type & type, NodeObject & object, const Handler & callback):
-_type(type), _object(&object), _data(nullptr) {
+Node::Node(const Type & type, NodeObject * object, const Handler & callback):
+_type(type), _object(object), _data(nullptr) {
 	if (!_object) {
 		// TODO error
 	}

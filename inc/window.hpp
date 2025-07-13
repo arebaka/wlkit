@@ -1,9 +1,15 @@
 #pragma once
 
-#include "common.hpp"
-
-#include <wayland-server-core.h>
+extern "C" {
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
+// #pragma push_macro("class")
+// #undef class
+// #define class class_field
+// #include <wlr/xwayland/xwayland.h>
+// #pragma pop_macro("class")
+}
+
+#include "common.hpp"
 
 namespace wlkit {
 
@@ -14,8 +20,8 @@ public:
 private:
 	Server * _server;
 	Workspace * _workspace;
-	struct wlr_xdg_surface * _xdg_surface;
-	struct wlr_xwayland_surface * _xwayland_surface;
+	struct ::wlr_xdg_surface * _xdg_surface;
+	struct wlr_xwayland_surface * _xwayland_surface;  // isnt real wlr_xwayland_surface
 	char * _title;
 	char * _app_id;
 
@@ -34,10 +40,10 @@ private:
 
 public:
 	Window(
-		struct Server & server,
-		struct Workspace & workspace,
-		struct wlr_xdg_surface & xdg_surface,
-		struct wlr_xwayland_surface & xwayland_surface,
+		struct Server * server,
+		struct Workspace * workspace,
+		struct wlr_xdg_surface * xdg_surface,
+		struct wlr_xwayland_surface * xwayland_surface,
 		const char * title,
 		const char * app_id,
 		const Handler & callback);

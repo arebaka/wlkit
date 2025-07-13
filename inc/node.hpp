@@ -9,12 +9,12 @@ public:
 	typedef std::function<void(Node&)> Handler;
 	typedef uint32_t ID;
 
-	typedef enum {
+	typedef enum Type {
 		ROOT,
 		OUTPUT,
 		WORKSPACE,
 		CONTAINER,
-	} Type;
+	};
 
 	typedef union {
 		Root * root;
@@ -37,7 +37,7 @@ private:
 public:
 	Node(
 		const Type & type,
-		NodeObject & object,
+		NodeObject * object,
 		const Handler & callback);
 	~Node();
 

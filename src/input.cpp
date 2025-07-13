@@ -2,20 +2,19 @@
 
 using namespace wlkit;
 
-Input::Input(Server & server, struct wlr_input_device * device, const Handler & callback):
-_server(&server), _device(device), _data(nullptr) {
+Input::Input(Server * server, const Type & type, struct wlr_input_device * device, const Handler & callback):
+_server(server), _type(type), _device(device), _data(nullptr) {
 	_destroy_listener.notify = _handle_destroy;
-	wl_signal_add(&device->events.destroy, &_destroy_listener);
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
+		callback(*this);
 	}
-	callback(*this);
 }
 
 Input::~Input() {
 	for (auto & cb : _on_destroy) {
-		cb(*input);
+		cb(*this);
 	}
 }
 
@@ -41,7 +40,7 @@ Input & Input::on_destroy(const Handler &handler) {
 	return *this;
 }
 
-static void _handle_destroy(struct wl_listener * listener, void * data) {
+void Input::_handle_destroy(struct wl_listener * listener, void * data) {
 	Input * input = wl_container_of(listener, input, _destroy_listener);
 	delete input;
 }

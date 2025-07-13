@@ -31,7 +31,6 @@ extern "C" {
 }
 
 #include "common.hpp"
-#include "window.hpp"
 
 namespace wlkit {
 
@@ -43,18 +42,18 @@ private:
 	struct wl_display * _display;
 	struct wl_event_loop * _event_loop;
 
-	struct wlr_seat * _seat;
-	struct wlr_backend * _backend;
-	struct wlr_session * _session;
-	struct wlr_renderer * _renderer;
-	struct wlr_allocator * _allocator;
-	struct wlr_compositor * _compositor;
+	struct ::wlr_seat * _seat;
+	struct ::wlr_backend * _backend;
+	struct ::wlr_session * _session;
+	struct ::wlr_renderer * _renderer;
+	struct ::wlr_allocator * _allocator;
+	struct ::wlr_compositor * _compositor;
 
 	Root * _root;
 	bool _running;
 	const char * _socket_id;
 	std::list<Output*> _outputs;
-	// struct wl_list _inputs;
+	std::list<Input*> _inputs;
 	std::list<Workspace*> _workspaces;
 	std::list<Window*> _windows;
 	WindowsHistory * _windows_history;
@@ -62,7 +61,7 @@ private:
 	// struct wl_list _xdg_decorations;
 	void * _data;
 
-	struct wlr_xdg_shell * _xdg_shell;
+	struct ::wlr_xdg_shell * _xdg_shell;
 	// struct wlr_foreign_toplevel_manager_v1 * _foreign_toplevel_manager_v1;
 	// struct wlr_data_device_manager * _data_device_manager;
 	// struct wlr_idle_notifier_v1 * _idle_notifier_v1;
@@ -111,8 +110,8 @@ private:
 
 public:
 	Server(
-		struct wl_display & display,
-		struct wlr_seat & seat,
+		struct wl_display * display,
+		struct wlr_seat * seat,
 		const Handler & callback);
 
 	~Server();

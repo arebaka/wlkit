@@ -3,16 +3,16 @@
 
 using namespace wlkit;
 
-Render::Render(Output & output, struct wlr_buffer_pass_options & pass_opts, const Handler & callback):
-_output(&output), _data(nullptr) {
-	if (!_output || !_output->wlr_output() || !&pass_opts) {
+Render::Render(Output * output, struct wlr_buffer_pass_options * pass_opts, const Handler & callback):
+_output(output), _data(nullptr) {
+	if (!_output || !_output->wlr_output() || !pass_opts) {
 		// TODO error
 	}
 
 	_state = new wlr_output_state{};
 	wlr_output_state_init(_state);
 
-	_pass = wlr_output_begin_render_pass(_output->wlr_output(), _state, &pass_opts);
+	_pass = wlr_output_begin_render_pass(_output->wlr_output(), _state, pass_opts);
 	if (!_pass) {
 		wlr_output_state_finish(_state);
 		// TODO error

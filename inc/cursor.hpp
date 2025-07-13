@@ -17,8 +17,8 @@ public:
 private:
 	Root * _root;
 
-	struct wlr_cursor * _wlr_cursor;
-	struct wlr_xcursor_manager * _xcursor_manager;
+	struct ::wlr_cursor * _wlr_cursor;
+	struct ::wlr_xcursor_manager * _xcursor_manager;
 
 	void * _data;
 
@@ -29,10 +29,10 @@ private:
 
 public:
 	Cursor(
-		Root & root,
-		char & name,
-		const Size size,
-		const Handler & handler);
+		Root * root,
+		char * name,
+		const Size & size,
+		const Handler & callback);
 	~Cursor();
 
 	[[nodiscard]] Root * root() const;

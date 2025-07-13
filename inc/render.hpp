@@ -16,8 +16,8 @@ public:
 private:
 	Output * _output;
 
-	struct wlr_output_state * _state;
-	struct wlr_render_pass * _pass;
+	struct ::wlr_output_state * _state;
+	struct ::wlr_render_pass * _pass;
 
 	void * _data;
 
@@ -28,8 +28,8 @@ private:
 
 public:
 	Render(
-		Output & output,
-		struct wlr_buffer_pass_options & pass_opts,
+		Output * output,
+		struct wlr_buffer_pass_options * pass_opts,
 		const Handler & callback);
 	~Render();
 

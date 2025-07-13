@@ -2,16 +2,13 @@
 #include "workspace.hpp"
 #include "server.hpp"
 
-#include <wlroots-0.19/wlr/types/wlr_xdg_shell.h>
-#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
-
 using namespace wlkit;
 
-Window::Window(Server & server, Workspace & workspace,
-	struct wlr_xdg_surface & xdg_surface, struct wlr_xwayland_surface & xwayland_surface,
+Window::Window(Server * server, Workspace * workspace,
+	struct wlr_xdg_surface * xdg_surface, struct wlr_xwayland_surface * xwayland_surface,
 	const char * title, const char * app_id, const Handler & callback):
-_server(&server), _workspace(&workspace),
-_xdg_surface(&xdg_surface), _xwayland_surface(&xwayland_surface),
+_server(server), _workspace(workspace),
+_xdg_surface(xdg_surface), _xwayland_surface(xwayland_surface),
 _data(nullptr) {
 	_title = strdup(title ? title : "");
 	_app_id = strdup(app_id ? app_id : "");

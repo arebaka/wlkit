@@ -19,6 +19,9 @@ extern "C" {
 #define static
 #include <wlr/types/wlr_scene.h>
 #undef static
+// #define class class_
+// #include <wlr/xwayland/xwayland.h>
+// #undef class
 }
 
 namespace wlkit {
@@ -36,8 +39,11 @@ class Workspace;
 class WorkspacesHistory;
 class Layout;
 class Window;
+class WindowsHistory;
+class Input;
+class Keyboard;
 
-typedef union {
+union Object {
 	Server * server;
 	Root * root;
 	Node * node;
@@ -46,7 +52,9 @@ typedef union {
 	Render * render;
 	Workspace * workspace;
 	Window * window;
-} Object;
+	Input * input;
+	Keyboard * keyboard;
+};
 
 using NotifyHandler = std::function<void(struct wl_listener * listener, void * data, Object & object)>;
 

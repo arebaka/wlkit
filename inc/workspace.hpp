@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common.hpp"
-#include "window.hpp"
 
 namespace wlkit {
 
@@ -33,8 +32,8 @@ private:
 
 public:
 	Workspace(
-		Server & server,
-		Layout & layout,
+		Server * server,
+		Layout * layout,
 		ID id,
 		const char * name,
 		const Handler & callback);
