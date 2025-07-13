@@ -1,0 +1,10 @@
+* text=auto
+eol=lf
+
+*.c text
+*.cc text
+*.cxx
+*.cpp text
+*.h text
+*.hxx text
+*.hpp text
