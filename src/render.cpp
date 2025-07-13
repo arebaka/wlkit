@@ -3,7 +3,7 @@
 
 using namespace wlkit;
 
-Render::Render(Output & output, struct wlr_buffer_pass_options & pass_opts):
+Render::Render(Output & output, struct wlr_buffer_pass_options & pass_opts, const Handler & callback):
 _output(&output), _data(nullptr) {
 	if (!_output || !_output->wlr_output() || !&pass_opts) {
 		// TODO error
@@ -17,9 +17,20 @@ _output(&output), _data(nullptr) {
 		wlr_output_state_finish(_state);
 		// TODO error
 	}
+
+	_destroy_listener.notify = _handle_destroy;
+
+	if (callback) {
+		_on_create.push_back(std::move(callback));
+		callback(*this);
+	}
 }
 
 Render::~Render() {
+	for (auto & cb : _on_destroy) {
+		cb(*this);
+	}
+
 	delete _state;
 }
 
@@ -56,4 +67,15 @@ struct wlr_output_state * Render::state() const {
 
 struct wlr_render_pass * Render::pass() const {
 	return _pass;
+}
+
+Render & Render::on_destroy(const Handler & handler) {
+	if (handler) {
+		_on_destroy.push_back(std::move(handler));
+	}
+}
+
+void Render::_handle_destroy(struct wl_listener * listener, void * data) {
+	Render * it = wl_container_of(listener, it, _destroy_listener);
+	delete it;
 }

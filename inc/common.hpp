@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <functional>
+#include <list>
+#include <memory>
 
 extern "C" {
 #include <wayland-server-core.h>

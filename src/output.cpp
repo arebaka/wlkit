@@ -6,7 +6,7 @@ extern "C" {
 
 using namespace wlkit;
 
-Output::Output(Server & server, struct wlr_output & wlr_output):
+Output::Output(Server & server, struct wlr_output & wlr_output, const Handler & callback):
 _server(&server), _wlr_output(&wlr_output), _current_workspace(nullptr), _data(nullptr) {
 	if (!_server || !_wlr_output) {
 		// TODO error
@@ -25,6 +25,8 @@ _server(&server), _wlr_output(&wlr_output), _current_workspace(nullptr), _data(n
 		// TODO error
 	}
 
+	_repaint_timer = wl_event_loop_add_timer(event_loop, _handle_repaint_timer, this);
+
 	if (!wlr_output_init_render(_wlr_output, allocator, renderer)) {
 		wlr_scene_output_destroy(_scene_output);
 		// TODO error
@@ -32,6 +34,10 @@ _server(&server), _wlr_output(&wlr_output), _current_workspace(nullptr), _data(n
 
 	_state = new wlr_output_state{};
 	wlr_output_state_init(_state);
+
+	_destroy_listener.notify = _handle_destroy;
+	wl_signal_add(&_wlr_output->events.destroy, &_destroy_listener);
+	wl_signal_add(&_scene_output->events.destroy, &_destroy_listener);
 
 	_workspaces_history = new WorkspacesHistory();
 
@@ -41,10 +47,17 @@ _server(&server), _wlr_output(&wlr_output), _current_workspace(nullptr), _data(n
 	_frame_listener.notify = _handle_frame;
 	wl_signal_add(&_wlr_output->events.frame, &_frame_listener);
 
-	_repaint_timer = wl_event_loop_add_timer(event_loop, _handle_repaint_timer, this);
+	if (callback) {
+		_on_create.push_back(std::move(callback));
+		callback(*this);
+	}
 }
 
 Output::~Output() {
+	for (auto & cb : _on_destroy) {
+		cb(*this);
+	}
+
 	delete _workspaces_history;
 	delete _state;
 	wlr_scene_output_destroy(_scene_output);
@@ -151,9 +164,107 @@ WorkspacesHistory * Output::workspaces_history() const {
 	return _workspaces_history;
 }
 
-Output & Output::on_frame(NotifyHandler handler) {
-	_on_frame.push_back(std::move(handler));
+const char * Output::name() const {
+	return _wlr_output->name;
+}
+
+const char * Output::description() const {
+	return _wlr_output->description;
+}
+
+const char * Output::get_make() const {
+	return _wlr_output->make;
+}
+
+const char * Output::model() const {
+	return _wlr_output->model;
+}
+
+const char * Output::serial() const {
+	return _wlr_output->serial;
+}
+
+Geo Output::phys_width() const {
+	return _wlr_output->phys_width;
+}
+
+Geo Output::phys_height() const {
+	return _wlr_output->phys_height;
+}
+
+Geo Output::width() const {
+	return _wlr_output->width;
+}
+
+Geo Output::height() const {
+	return _wlr_output->height;
+}
+
+Output::ModeRefresh Output::refresh_rate() const {
+	return _wlr_output->refresh;
+}
+
+bool Output::enabled () const {
+	return _wlr_output->enabled;
+}
+
+Output::Scale Output::get_scale() const {
+	return _wlr_output->scale;
+}
+
+wl_output_subpixel Output::subpixel() const {
+	return _wlr_output->subpixel;
+}
+
+wl_output_transform Output::get_transform() const {
+	return _wlr_output->transform;
+}
+
+wlr_output_adaptive_sync_status Output::adaptive_sync_status() const {
+	return _wlr_output->adaptive_sync_status;
+}
+
+Output::RenderFormat Output::render_format() const {
+	return _wlr_output->render_format;
+}
+
+bool Output::adaptive_sync_supported() const {
+	return _wlr_output->adaptive_sync_supported;
+}
+
+bool Output::needs_frame() const {
+	return _wlr_output->needs_frame;
+}
+
+bool Output::frame_pending() const {
+	return _wlr_output->frame_pending;
+}
+
+bool Output::non_desktop() const {
+	return _wlr_output->non_desktop;
+}
+
+Output::CommitSeq Output::commit_seq() const {
+	return _wlr_output->commit_seq;
+}
+
+Output & Output::on_destroy(const Handler & handler) {
+	if (handler) {
+		_on_destroy.push_back(std::move(handler));
+	}
 	return *this;
+}
+
+Output & Output::on_frame(const NotifyHandler & handler) {
+	if (handler) {
+		_on_frame.push_back(std::move(handler));
+	}
+	return *this;
+}
+
+void Output::_handle_destroy(struct wl_listener * listener, void * data) {
+	Output * output = wl_container_of(listener, output, _destroy_listener);
+	delete output;
 }
 
 void Output::_handle_frame(struct wl_listener * listener, void * data) {
@@ -164,7 +275,7 @@ void Output::_handle_frame(struct wl_listener * listener, void * data) {
 	}
 
 	struct wlr_buffer_pass_options pass_opts{};
-	auto render = new Render(*output, pass_opts);
+	auto render = new Render(*output, pass_opts, nullptr);
 
 	Object object{ .render = render };
 	for (auto & cb : output->_on_frame) {

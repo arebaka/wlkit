@@ -21,17 +21,31 @@ private:
 
 	void * _data;
 
+	std::list<Handler> _on_create;
+	std::list<Handler> _on_destroy;
+
+	wl_listener _destroy_listener;
+
 public:
 	Render(
 		Output & output,
-		struct wlr_buffer_pass_options & pass_opts);
+		struct wlr_buffer_pass_options & pass_opts,
+		const Handler & callback);
 	~Render();
 
 	Render & commit();
 
-	Output * output() const;
-	struct wlr_output_state * state() const;
-	struct wlr_render_pass * pass() const;
+	[[nodiscard]] Output * output() const;
+	[[nodiscard]] struct wlr_output_state * state() const;
+	[[nodiscard]] struct wlr_renderer * renderer() const;
+	[[nodiscard]] struct wlr_render_pass * pass() const;
+
+	// TODO setters
+
+	Render & on_destroy(const Handler & handler);
+
+private:
+	static void _handle_destroy(struct wl_listener * listener, void * data);
 };
 
 }

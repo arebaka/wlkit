@@ -3,17 +3,20 @@
 
 using namespace wlkit;
 
-Workspace::Workspace(Server * server, Layout * layout, ID id, const char * name):
-_server(server), _layout(layout), _id(id) {
+Workspace::Workspace(Server & server, Layout & layout, ID id, const char * name, const Handler & callback):
+_server(&server), _layout(&layout), _id(id) {
 	_name = strdup(name ? name : "");
 	_focused_window = nullptr;
 	_data = nullptr;
 
 	// _layout->workspace = this;
-	server->add_workspace(this);
+	_server->add_workspace(this);
 
-	for (auto & cb : _on_create) {
-		cb(*this);
+	_destroy_listener.notify = _handle_destroy;
+
+	if (callback) {
+		_on_create.push_back(std::move(callback));
+		callback(*this);
 	}
 }
 
@@ -47,4 +50,15 @@ std::list<Window*> Workspace::windows() {
 
 Window * Workspace::focused_window() {
 	return _focused_window;
+}
+
+Workspace & Workspace::on_destroy(const Handler & handler) {
+	if (handler) {
+		_on_destroy.push_back(std::move(handler));
+	}
+}
+
+void Workspace::_handle_destroy(struct wl_listener * listener, void * data) {
+	Workspace * it = wl_container_of(listener, it, _destroy_listener);
+	delete it;
 }

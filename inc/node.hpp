@@ -26,26 +26,34 @@ public:
 private:
 	Type _type;
 	NodeObject * _object;
-
 	ID _id;
 	void * _data;
 
-	struct wl_signal _destroy_event;
+	std::list<Handler> _on_create;
+	std::list<Handler> _on_destroy;
+
+	struct wl_listener _destroy_listener;
 
 public:
 	Node(
 		const Type & type,
-		NodeObject & object);
+		NodeObject & object,
+		const Handler & callback);
 	~Node();
 
 	Node & init();
 
-	Type type() const;
-	NodeObject * object() const;
-	ID id() const;
-	void * data() const;
+	[[nodiscard]] Type type() const;
+	[[nodiscard]] NodeObject * object() const;
+	[[nodiscard]] ID id() const;
+	[[nodiscard]] void * data() const;
 
 	Node & set_data(void * data);
+
+	Root & on_destroy(const Handler & handler);
+
+private:
+	static void _handle_destroy(struct wl_listener * listener, void * data);
 };
 
 }

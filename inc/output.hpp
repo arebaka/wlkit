@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ctime>
-#include <list>
 
 extern "C" {
 #include <wlr/types/wlr_output.h>
@@ -27,6 +26,7 @@ public:
 	typedef uint32_t ModeRefresh;
 	typedef size_t GammaLUTRampSize;
 	typedef uint16_t GammaLUTComponent;
+	typedef uint32_t CommitSeq;
 
 	typedef struct {
 		bool enabled;
@@ -60,27 +60,30 @@ public:
 
 private:
 	Server * _server;
-
 	struct wlr_output * _wlr_output;
+
 	struct wlr_scene_output * _scene_output;
 	struct wl_event_source * _repaint_timer;
 	struct wlr_output_state * _state;
 
 	struct timespec _last_frame;
 	Workspace * _current_workspace;
-	void * _data;
-
 	std::list<Workspace*> _workspaces;
 	WorkspacesHistory * _workspaces_history;
+	void * _data;
 
+	std::list<Handler> _on_create;
+	std::list<Handler> _on_destroy;
 	std::list<NotifyHandler> _on_frame;
 
+	struct wl_listener _destroy_listener;
 	struct wl_listener _frame_listener;
 
 public:
 	Output(
 		Server & server,
-		struct wlr_output & wlr_output);
+		struct wlr_output & wlr_output,
+		const Handler & callback);
 	~Output();
 
 	Output & setup_state(const State * state);
@@ -91,47 +94,71 @@ public:
 	// Output & switch_workspace(Workspace::ID id);
 	Window * window_at(Geo x, Geo y);
 
-	Server * server() const;
-	struct wlr_output * wlr_output() const;
-	struct wlr_scene_output * scene_output() const;
-	struct wl_event_source * repaint_timer() const;
-	struct wlr_output_state * state() const;
-	struct timespec last_frame() const;
-	Workspace * current_workspace() const;
-	void * data() const;
-	std::list<Workspace*> workspaces() const;
-	WorkspacesHistory * workspaces_history() const;
+	[[nodiscard]] Server * server() const;
+	[[nodiscard]] struct wlr_output * wlr_output() const;
+	[[nodiscard]] struct wlr_scene_output * scene_output() const;
+	[[nodiscard]] struct wl_event_source * repaint_timer() const;
+	[[nodiscard]] struct wlr_output_state * state() const;
+	[[nodiscard]] struct timespec last_frame() const;
+	[[nodiscard]] Workspace * current_workspace() const;
+	[[nodiscard]] std::list<Workspace*> workspaces() const;
+	[[nodiscard]] WorkspacesHistory * workspaces_history() const;
+	[[nodiscard]] void * data() const;
+
+	[[nodiscard]] const char * name() const;
+	[[nodiscard]] const char * description() const;
+	[[nodiscard]] const char * get_make() const;
+	[[nodiscard]] const char * model() const;
+	[[nodiscard]] const char * serial() const;
+	[[nodiscard]] Geo phys_width() const;
+	[[nodiscard]] Geo phys_height() const;
+	[[nodiscard]] Geo width() const;
+	[[nodiscard]] Geo height() const;
+	[[nodiscard]] ModeRefresh refresh_rate() const;
+	[[nodiscard]] bool enabled () const;
+	[[nodiscard]] Scale get_scale() const;
+	[[nodiscard]] wl_output_subpixel subpixel() const;
+	[[nodiscard]] wl_output_transform get_transform() const;
+	[[nodiscard]] wlr_output_adaptive_sync_status adaptive_sync_status() const;
+	[[nodiscard]] RenderFormat render_format() const;
+	[[nodiscard]] bool adaptive_sync_supported() const;
+	[[nodiscard]] bool needs_frame() const;
+	[[nodiscard]] bool frame_pending() const;
+	[[nodiscard]] bool non_desktop() const;
+	[[nodiscard]] CommitSeq commit_seq() const;
 
 	// TODO setters
 
-	Output & on_frame(NotifyHandler handler);
+	Output & on_destroy(const Handler & handler);
+	Output & on_frame(const NotifyHandler & handler);
 
 private:
+	static void _handle_destroy(struct wl_listener * listener, void * data);
 	static void _handle_frame(struct wl_listener * listener, void * data);
 	static int _handle_repaint_timer(void * data);
 };
 
 class OutputStateBuilder {
 private:
-    Output::State _state;
+	Output::State _state;
 
 public:
-    OutputStateBuilder();
+	OutputStateBuilder();
 	~OutputStateBuilder();
 
-    OutputStateBuilder & enabled(bool value);
-    OutputStateBuilder & scale(Output::Scale value);
-    OutputStateBuilder & transform(Output::Transform value);
-    OutputStateBuilder & adaptive_sync_enabled(bool value);
-    OutputStateBuilder & render_format(Output::RenderFormat value);
-    OutputStateBuilder & subpixel(Output::Subpixel value);
-    OutputStateBuilder & buffer(Output::Buffer value);
-    OutputStateBuilder & damage(Output::PixmanRegion value);
-    OutputStateBuilder & layers(Output::LayerStates v, size_t n);
-    OutputStateBuilder & wait(Output::DRMSyncobjTimeline timeline, Output::TimelinePoint src_point);
-    OutputStateBuilder & signal(Output::DRMSyncobjTimeline timeline, Output::TimelinePoint dst_point);
+	OutputStateBuilder & enabled(bool value);
+	OutputStateBuilder & scale(Output::Scale value);
+	OutputStateBuilder & transform(Output::Transform value);
+	OutputStateBuilder & adaptive_sync_enabled(bool value);
+	OutputStateBuilder & render_format(Output::RenderFormat value);
+	OutputStateBuilder & subpixel(Output::Subpixel value);
+	OutputStateBuilder & buffer(Output::Buffer value);
+	OutputStateBuilder & damage(Output::PixmanRegion value);
+	OutputStateBuilder & layers(Output::LayerStates v, size_t n);
+	OutputStateBuilder & wait(Output::DRMSyncobjTimeline timeline, Output::TimelinePoint src_point);
+	OutputStateBuilder & signal(Output::DRMSyncobjTimeline timeline, Output::TimelinePoint dst_point);
 
-    Output::State * build();
+	std::unique_ptr<Output::State> build();
 };
 
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <list>
-
 #include "common.hpp"
 #include "window.hpp"
 
@@ -31,30 +29,38 @@ private:
 	// std::list<Handler> _on_window_removed;
 	// std::list<Handler> _on_layout_change;
 
+	wl_listener _destroy_listener;
+
 public:
 	Workspace(
-		Server * server,
-		Layout * layout,
+		Server & server,
+		Layout & layout,
 		ID id,
-		const char * name);
+		const char * name,
+		const Handler & callback);
 	~Workspace();
 
-	Server * server() const;
-	Layout * layout() const;
-	ID id() const;
-	const char * name();
-	std::list<Window*> windows();
-	WindowsHistory * windows_history();
-	Window * focused_window();
-	void * data();
+	[[nodiscard]] Server * server() const;
+	[[nodiscard]] Layout * layout() const;
+	[[nodiscard]] ID id() const;
+	[[nodiscard]] const char * name();
+	[[nodiscard]] std::list<Window*> windows();
+	[[nodiscard]] WindowsHistory * windows_history();
+	[[nodiscard]] Window * focused_window();
+	[[nodiscard]] void * data();
 
 	// TODO setters
+
+	Workspace & on_destroy(const Handler & handler);
+
+private:
+	static void _handle_destroy(struct wl_listener * listener, void * data);
 };
 
 class WorkspacesHistory {
 private:
-    std::list<Workspace*> _order;
-    std::unordered_map<Workspace*, std::list<Workspace*>::iterator> _pos;
+	std::list<Workspace*> _order;
+	std::unordered_map<Workspace*, std::list<Workspace*>::iterator> _pos;
 
 public:
 	WorkspacesHistory();

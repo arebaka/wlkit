@@ -27,20 +27,29 @@ _display(&display), _seat(&seat), _running(false), _data(nullptr) {
 		// TODO error
 	}
 	wlr_renderer_init_wl_display(_renderer, _display);
+	wlr_renderer_init_wl_shm(_renderer, _display);
 
 	_allocator = wlr_allocator_autocreate(_backend, _renderer);
 	if (!_allocator) {
 		// TODO error
 	}
 
-	_root = new Root(*this, nullptr, 24);  // TODO from config
-
 	_compositor = wlr_compositor_create(_display, 6, _renderer);
 	wlr_subcompositor_create(_display);
+
+	_destroy_listener.notify = _handle_destroy;
+	wl_signal_add(&_backend->events.destroy, &_destroy_listener);
+	wl_signal_add(&_renderer->events.destroy, &_destroy_listener);
+	wl_signal_add(&_allocator->events.destroy, &_destroy_listener);
+	wl_signal_add(&_compositor->events.destroy, &_destroy_listener);
+
+	_root = new Root(*this, nullptr, 24, nullptr);  // TODO from config
 
 	_xdg_shell = wlr_xdg_shell_create(_display, 5);
 	_new_xdg_shell_toplevel_listener.notify = _handle_new_xdg_shell_toplevel;
 	wl_signal_add(&_xdg_shell->events.new_toplevel, &_new_xdg_shell_toplevel_listener);
+
+	// _foreign_toplevel_manager_v1 = wlr_foreign_toplevel_manager_v1_create(_display);
 
 	// _data_device_manager = wlr_data_device_manager_create(_display);
 	// _idle_notifier_v1 = wlr_idle_notifier_v1_create(_display);
@@ -89,8 +98,8 @@ _display(&display), _seat(&seat), _running(false), _data(nullptr) {
 	// _new_xdg_decoration_listener.notify = _handle_new_xdg_decoration;
 	// wl_signal_add(&_xdg_decoration_manager_v1->events.new_toplevel_decoration, &_new_xdg_decoration_listener);
 
-    _new_output_listener.notify = _handle_new_output;
-    wl_signal_add(&_backend->events.new_output, &_new_output_listener);
+	_new_output_listener.notify = _handle_new_output;
+	wl_signal_add(&_backend->events.new_output, &_new_output_listener);
 	_new_input_listener.notify = _handle_new_input;
 	wl_signal_add(&_backend->events.new_input, &_new_input_listener);
 	_new_xdg_surface_listener.notify = _handle_new_xdg_surface;
@@ -98,9 +107,7 @@ _display(&display), _seat(&seat), _running(false), _data(nullptr) {
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-	}
-	for (auto & cb : _on_create) {
-		cb(*this);
+		callback(*this);
 	}
 }
 
@@ -181,10 +188,6 @@ wlr_compositor * Server::compositor() const {
 	return _compositor;
 }
 
-wlr_xdg_shell * Server::xdg_shell() const {
-	return _xdg_shell;
-}
-
 Root * Server::root() const {
 	return _root;
 }
@@ -201,6 +204,26 @@ void * Server::data() const {
 	return _data;
 }
 
+std::list<Output*> Server::outputs() const {
+	return _outputs;
+}
+
+std::list<Workspace*> Server::workspaces() const {
+	return _workspaces;
+}
+
+std::list<Window*> Server::windows() const {
+	return _windows;
+}
+
+WindowsHistory * Server::windows_history() const {
+	return _windows_history;
+}
+
+wlr_xdg_shell * Server::xdg_shell() const {
+	return _xdg_shell;
+}
+
 Server & Server::set_data(void * data) {
 	_data = data;
 	return *this;
@@ -211,32 +234,51 @@ Server & Server::add_workspace(Workspace * workspace) {
 }
 
 Server & Server::on_destroy(const Handler & handler) {
-	_on_destroy.push_back(std::move(handler));
+	if (handler) {
+		_on_destroy.push_back(std::move(handler));
+	}
 	return *this;
 }
 
 Server & Server::on_start(const Handler & handler) {
-	_on_start.push_back(std::move(handler));
+	if (handler) {
+		_on_start.push_back(std::move(handler));
+	}
 	return *this;
 }
 
 Server & Server::on_stop(const Handler & handler) {
-	_on_stop.push_back(std::move(handler));
+	if (handler) {
+		_on_stop.push_back(std::move(handler));
+	}
 	return *this;
 }
 
 Server & Server::on_new_output(const NotifyHandler & handler) {
-	_on_new_output.push_back(std::move(handler));
+	if (handler) {
+		_on_new_output.push_back(std::move(handler));
+	}
 	return *this;
 }
 
-void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void * data) {}
+Server & Server::on_new_input(const NotifyHandler & handler) {
+	if (handler) {
+		_on_new_input.push_back(std::move(handler));
+	}
+	return *this;
+}
+
+void Server::_handle_destroy(struct wl_listener * listener, void * data) {
+	Server * it = wl_container_of(listener, it, _destroy_listener);
+	delete it;
+
+}
 
 void Server::_handle_new_output(struct wl_listener * listener, void * data) {
 	Server * server = wl_container_of(listener, server, _new_output_listener);
 	auto wlr_output = static_cast<struct wlr_output*>(data);
 
-	auto output = new Output(*server, *wlr_output);
+	auto output = new Output(*server, *wlr_output, nullptr);
 	server->_outputs.push_back(output);
 
 	Object object = { .output = output };
@@ -246,7 +288,53 @@ void Server::_handle_new_output(struct wl_listener * listener, void * data) {
 }
 
 void Server::_handle_new_input(struct wl_listener * listener, void * data) {
+	struct Server * server = wl_container_of(listener, server, _new_input_listener);
+	auto device = static_cast<struct wlr_input_device*>(data);
 
+	wlr_seat_set_capabilities(server->seat(),
+		WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_TOUCH);
+
+	// auto input = new Input(*server, *device, nullptr);
+	// server->_inputs.push_back(input);
+
+	// Object object = { .input = input };
+	// for (auto & cb : server->_on_new_input) {
+	// 	cb(listener, data, object);
+	// }
+
+	// switch (device->type) {
+	// case WLR_INPUT_DEVICE_KEYBOARD:;
+	//	 struct sample_keyboard *keyboard = calloc(1, sizeof(struct sample_keyboard));
+	//	 keyboard->device = device;
+	//	 keyboard->sample = sample;
+	//	 wl_signal_add(&device->events.destroy, &keyboard->destroy);
+	//	 keyboard->destroy.notify = keyboard_destroy_notify;
+	//	 wl_signal_add(&device->keyboard->events.key, &keyboard->key);
+	//	 keyboard->key.notify = keyboard_key_notify;
+	//	 struct xkb_rule_names rules = { 0 };
+	//	 rules.rules = getenv("XKB_DEFAULT_RULES");
+	//	 rules.model = getenv("XKB_DEFAULT_MODEL");
+	//	 rules.layout = getenv("XKB_DEFAULT_LAYOUT");
+	//	 rules.variant = getenv("XKB_DEFAULT_VARIANT");
+	//	 rules.options = getenv("XKB_DEFAULT_OPTIONS");
+	//	 struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+	//	 if (!context) {
+	//		 wlr_log(WLR_ERROR, "Failed to create XKB context");
+	//		 exit(1);
+	//	 }
+	//	 struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules,
+	//		 XKB_KEYMAP_COMPILE_NO_FLAGS);
+	//	 if (!keymap) {
+	//		 wlr_log(WLR_ERROR, "Failed to create XKB keymap");
+	//		 exit(1);
+	//	 }
+	//	 wlr_keyboard_set_keymap(device->keyboard, keymap);
+	//	 xkb_keymap_unref(keymap);
+	//	 xkb_context_unref(context);
+	//	 break;
+	// default:
+	//	 break;
+	// }
 }
 
 void Server::_handle_new_xdg_surface(struct wl_listener * listener, void * data) {
@@ -280,6 +368,8 @@ void Server::_handle_new_xdg_surface(struct wl_listener * listener, void * data)
 	// 		server->portal_manager->foreign_toplevel_manager_v1);
 	// }
 }
+
+void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void * data) {}
 
 void Server::_handle_xdg_activation_v1_destroy(struct wl_listener * listener, void * data) {};
 void Server::_handle_xdg_activation_v1_request_activate(struct wl_listener * listener, void * data) {};

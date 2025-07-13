@@ -1,7 +1,5 @@
 #pragma once
 
-#include <list>
-
 extern "C" {
 #include <wlr/types/wlr_output_layout.h>
 }
@@ -26,22 +24,30 @@ private:
 	Geo _x, _y, _width, _height;
 	Node * _node;
 	Cursor * _cursor;
-
 	void * _data;
 
 	// struct wl_list layers;
 
-	struct wl_signal _new_node_event;
+	std::list<Handler> _on_create;
+	std::list<Handler> _on_destroy;
+
+	struct wl_listener _destroy_listener;
 
 public:
 	Root(
 		Server & server,
 		char * cursor_name,
-		const Cursor::Size & cursor_size);
+		const Cursor::Size & cursor_size,
+		const Handler & callback);
 	~Root();
 
-	struct wlr_scene * scene();
-	struct wlr_output_layout * output_layout();
+	[[nodiscard]] struct wlr_scene * scene() const;
+	[[nodiscard]] struct wlr_output_layout * output_layout() const;
+
+	Root & on_destroy(const Handler & handler);
+
+private:
+	static void _handle_destroy(struct wl_listener * listener, void * data);
 };
 
 }
