@@ -43,6 +43,8 @@ public:
 
 	virtual bool is_keyboard() const;
 	virtual Keyboard * as_keyboard();
+	virtual bool is_pointer() const;
+	virtual Pointer * as_pointer();
 
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] Type type() const;

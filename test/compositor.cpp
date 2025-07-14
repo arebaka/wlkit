@@ -5,6 +5,7 @@
 #include <wlkit/output.hpp>
 #include <wlkit/render.hpp>
 #include <wlkit/device/keyboard.hpp>
+#include <wlkit/device/pointer.hpp>
 
 extern "C" {
 #include <wlr/types/wlr_seat.h>
@@ -20,6 +21,9 @@ extern "C" {
 #include <xkbcommon/xkbcommon.h>
 }
 
+static wlkit::Geo cursor_x = 0, cursor_y = 0;
+static bool cursor_state = 0;
+
 void setup_portal_env(const wlkit::Server & server) {
 	(void)server;  // unused for now
 	setenv("XDG_CURRENT_DESKTOP", "wlkit", 1);
@@ -30,18 +34,6 @@ void setup_portal_env(const wlkit::Server & server) {
 // void create_default_workspace(struct wlkit::Server & server) {
 // 	server.set_current_workspace = new wlkit::Workspace(server, &wlkit_layout_floating, 1, "default");
 // }
-
-void dummy_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
-	struct wlr_render_pass * pass = render->pass();
-
-	struct wlr_render_rect_options rect_opts = {
-		.box = { 0, 0, 100, 100 },
-		.color = { 1.0f, 0.0f, 0.0f, 1.0f },
-	};
-	wlr_render_pass_add_rect(pass, &rect_opts);
-
-	// draw_textured_label(pass, wlr_output->renderer, "Hello, Wayland!", 50, 50);
-}
 
 void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render
 ) {
@@ -238,9 +230,16 @@ void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, 
 	}
 }
 
-void setup_draw(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Server * server) {
-	// output->on_frame(dummy_draw_frame);
-	output->on_frame(ai_test_draw_frame);
+void draw_cursor(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
+	struct wlr_render_pass * pass = render->pass();
+
+	const float color = cursor_state ? 1.0f : 0.0f;
+
+	struct wlr_render_rect_options rect_opts = {
+		.box = { cursor_x, cursor_y, 20, 20 },
+		.color = { color, color, color, 1.0f }
+	};
+	wlr_render_pass_add_rect(pass, &rect_opts);
 }
 
 void setup_output(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Server * server) {
@@ -269,41 +268,84 @@ void handle_key( struct wlr_keyboard_key_event * event, wlkit::Keyboard * keyboa
 	}
 }
 
-void setup_input( wlkit::Input * input, struct wlr_input_device * device, wlkit::Server * server) {
+void setup_keyboard(wlkit::Keyboard * keyboard) {
+	keyboard->
+		set_rules("base")
+		.set_model("pc105")
+		.set_layout("us,ru")
+		.set_variant("")
+		.set_options("ctrl:nocaps,grp:alt_shift_toggle,grp_led:caps,lv3:ralt_switch,altwin:meta_alt,compose:rctrl,numpad:pc,nbsp:level3,terminate:ctrl_alt_bksp")
+		.compile_keymap();
+
+	keyboard->
+		on_key_pressed([](auto keyboard, auto keycode) {
+			std::cout << "Key pressed: code=" << keycode << std::endl;
+		})
+		.on_key_released([](auto keyboard, auto keycode) {
+			auto sym = xkb_state_key_get_one_sym(keyboard->wlr_keyboard()->xkb_state, keycode + 8);
+			char name[64];
+			xkb_keysym_get_name(sym, name, sizeof(name));
+			std::cout << "Key released: code=" << keycode << " name=" << name  << std::endl;
+		})
+		.on_mod([](auto keyboard, auto mods) {
+			std::cout << "Modifiers changed:"
+				<< " depressed=" << mods->depressed
+				<< " latched="   << mods->latched
+				<< " locked="    << mods->locked
+				<< " group="     << std::dec << mods->group
+				<< std::endl;
+		})
+		.on_repeat([](auto keyboard, auto info) {
+			std::cout << "Repeat rate=" << info.rate << "Hz, delay=" << info.delay << "ms\n" << std::endl;
+		})
+		.on_key_pressed([](auto keyboard, auto keycode) {
+			auto server = keyboard->server();
+			auto sym = xkb_state_key_get_one_sym(keyboard->wlr_keyboard()->xkb_state, keycode + 8);
+			if (sym == XKB_KEY_Escape) {
+				std::cout
+					<< "outputs: " << server->outputs().size() << std::endl
+					<< "inputs: " << server->inputs().size() << std::endl
+					<< "workspaces: " << server->workspaces().size() << std::endl
+					<< "windows: " << server->windows().size() << std::endl
+					<< "Escape!" << std::endl;
+				server->stop();
+			}
+		});
+}
+
+void setup_pointer(wlkit::Pointer * pointer) {
+	pointer->
+		on_motion([](auto pointer, auto dx, auto dy, auto unaccel_dx, auto unaccel_dy) {
+			cursor_x += dx;
+			cursor_y += dy;
+
+			auto output = pointer->server()->outputs().front();
+			if (cursor_x < 0) {
+				cursor_x = output->width();
+			}
+			if (cursor_y < 0) {
+				cursor_y = output->height();
+			}
+			if (cursor_x > output->width()) {
+				cursor_x = 0;
+			}
+			if (cursor_y > output->height()) {
+				cursor_y = 0;
+			}
+		})
+		.on_button([](auto pointer, auto button, auto state) {
+			if (button == 272) {
+				cursor_state = state;
+			}
+		});
+}
+
+void setup_input(wlkit::Input * input, struct wlr_input_device * device, wlkit::Server * server) {
 	if (input->is_keyboard()) {
-		auto keyboard = input->as_keyboard();
-		keyboard->
-			set_rules("base")
-			.set_model("pc105")
-			.set_layout("us,ru")
-			.set_variant("")
-			.set_options("ctrl:nocaps,grp:alt_shift_toggle,grp_led:caps,lv3:ralt_switch,altwin:meta_alt,compose:rctrl,numpad:pc,nbsp:level3,terminate:ctrl_alt_bksp")
-			.compile_keymap()
-			.on_key_pressed([](auto event, auto keyboard, auto kbd) {
-				std::cout << "Key pressed: code=" << event->keycode << " state=" << event->state << std::endl;
-			})
-			.on_key_released([](auto event, auto keyboard, auto kbd) {
-				auto sym = xkb_state_key_get_one_sym(kbd->xkb_state, event->keycode + 8);
-				char name[64];
-				xkb_keysym_get_name(sym, name, sizeof(name));
-				std::cout << "Key released: code=" << event->keycode << " name=" << name  << std::endl;
-			})
-			.on_mod([](auto mods, auto keyboard, auto kbd) {
-				std::cout << "Modifiers changed:"
-					<< " depressed=" << mods->depressed
-					<< " latched="   << mods->latched
-					<< " locked="    << mods->locked
-					<< " group="     << std::dec << mods->group
-					<< std::endl;
-			})
-			.on_key_pressed([](auto event, auto keyboard, auto kbd) {
-				auto server = keyboard->server();
-				auto sym = xkb_state_key_get_one_sym(kbd->xkb_state, event->keycode + 8);
-				if (sym == XKB_KEY_Escape) {
-					std::cout << "Escape!" << std::endl;
-					server->stop();
-				}
-			});
+		return setup_keyboard(input->as_keyboard());
+	}
+	if (input->is_pointer()) {
+		return setup_pointer(input->as_pointer());
 	}
 }
 
@@ -316,6 +358,7 @@ int main() {
 		on_new_output([](auto output, auto wlr_output, auto server) {
 			// output->on_frame(dummy_draw_frame);
 			output->on_frame(ai_test_draw_frame);
+			output->on_frame(draw_cursor);
 		})
 		.on_new_output(setup_output)
 		.on_new_input(setup_input)

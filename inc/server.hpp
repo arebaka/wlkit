@@ -139,6 +139,7 @@ public:
 	[[nodiscard]] void * data() const;
 
 	[[nodiscard]] std::list<Output*> outputs() const;
+	[[nodiscard]] std::list<Input*> inputs() const;
 	[[nodiscard]] std::list<Workspace*> workspaces() const;
 	[[nodiscard]] std::list<Window*> windows() const;
 	[[nodiscard]] WindowsHistory * windows_history() const;

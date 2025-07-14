@@ -3,6 +3,7 @@
 #include "root.hpp"
 
 #include "device/keyboard.hpp"
+#include "device/pointer.hpp"
 
 extern "C" {
 #include <wlr/types/wlr_subcompositor.h>
@@ -209,6 +210,10 @@ std::list<Output*> Server::outputs() const {
 	return _outputs;
 }
 
+std::list<Input*> Server::inputs() const {
+	return _inputs;
+}
+
 std::list<Workspace*> Server::workspaces() const {
 	return _workspaces;
 }
@@ -301,7 +306,7 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 		input = new Keyboard(server, device, nullptr);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
-		return;
+		input = new Pointer(server, device, nullptr);
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
 		break;

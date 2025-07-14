@@ -43,6 +43,12 @@ public:
 
 	[[nodiscard]] struct wlr_scene * scene() const;
 	[[nodiscard]] struct wlr_output_layout * output_layout() const;
+	[[nodiscard]] struct wlr_scene_tree * staging() const;
+	[[nodiscard]] struct wlr_scene_tree * layer_tree() const;
+	[[nodiscard]] Geo x() const;
+	[[nodiscard]] Geo y() const;
+	[[nodiscard]] Geo width() const;
+	[[nodiscard]] Geo height() const;
 
 	Root & on_destroy(const Handler & handler);
 

@@ -18,12 +18,19 @@ Input::~Input() {
 	}
 }
 
-
 bool Input::is_keyboard() const {
 	return false;
 }
 
 Keyboard * Input::as_keyboard() {
+	return nullptr;
+}
+
+bool Input::is_pointer() const {
+	return false;
+}
+
+Pointer * Input::as_pointer() {
 	return nullptr;
 }
 

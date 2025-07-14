@@ -76,6 +76,30 @@ struct wlr_output_layout * Root::output_layout() const {
 	return _output_layout;
 }
 
+struct wlr_scene_tree * Root::staging() const {
+	return _staging;
+}
+
+struct wlr_scene_tree * Root::layer_tree() const {
+	return _layer_tree;
+}
+
+Geo Root::x() const {
+	return _x;
+}
+
+Geo Root::y() const {
+	return _y;
+}
+
+Geo Root::width() const {
+	return _width;
+}
+
+Geo Root::height() const {
+	return _height;
+}
+
 Root & Root::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));

@@ -29,7 +29,7 @@ extern "C" {
 
 namespace wlkit {
 
-using Geo = uint32_t;
+using Geo = int32_t;
 
 class Server;
 class Root;
@@ -46,6 +46,7 @@ class WindowsHistory;
 class Input;
 
 class Keyboard;
+class Pointer;
 
 using Object = std::variant<
 	Server*,
