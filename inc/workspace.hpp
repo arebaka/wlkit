@@ -6,8 +6,8 @@ namespace wlkit {
 
 class Workspace {
 public:
-	typedef std::function<void(Workspace&)> Handler;
-	typedef uint32_t ID;
+	using Handler = std::function<void(Workspace&)>;
+	using ID = uint32_t;
 
 private:
 	Server * _server;

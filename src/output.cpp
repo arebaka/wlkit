@@ -256,7 +256,7 @@ Output & Output::on_destroy(const Handler & handler) {
 	return *this;
 }
 
-Output & Output::on_frame(const NotifyHandler & handler) {
+Output & Output::on_frame(const FrameHandler & handler) {
 	if (handler) {
 		_on_frame.push_back(std::move(handler));
 	}
@@ -270,7 +270,7 @@ void Output::_handle_destroy(struct wl_listener * listener, void * data) {
 
 void Output::_handle_frame(struct wl_listener * listener, void * data) {
 	Output * output = wl_container_of(listener, output, _frame_listener);
-	auto wlr_output = output->wlr_output();
+	auto wlr_output = static_cast<struct wlr_output*>(data);
 	if (!wlr_output) {
 		return;
 	}
@@ -278,9 +278,8 @@ void Output::_handle_frame(struct wl_listener * listener, void * data) {
 	struct wlr_buffer_pass_options pass_opts{};
 	auto render = new Render(output, &pass_opts, nullptr);
 
-	Object object{ .render = render };
 	for (auto & cb : output->_on_frame) {
-		cb(listener, data, object);
+		cb(output, wlr_output, render);
 	}
 
 	render->commit();

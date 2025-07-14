@@ -255,14 +255,14 @@ Server & Server::on_stop(const Handler & handler) {
 	return *this;
 }
 
-Server & Server::on_new_output(const NotifyHandler & handler) {
+Server & Server::on_new_output(const NewOutputHandler & handler) {
 	if (handler) {
 		_on_new_output.push_back(std::move(handler));
 	}
 	return *this;
 }
 
-Server & Server::on_new_input(const NotifyHandler & handler) {
+Server & Server::on_new_input(const NewInputHandler & handler) {
 	if (handler) {
 		_on_new_input.push_back(std::move(handler));
 	}
@@ -282,9 +282,8 @@ void Server::_handle_new_output(struct wl_listener * listener, void * data) {
 	auto output = new Output(server, wlr_output, nullptr);
 	server->_outputs.push_back(output);
 
-	Object object{ .output = output };
 	for (auto & cb : server->_on_new_output) {
-		cb(listener, data, object);
+		cb(output, wlr_output, server);
 	}
 }
 
@@ -302,6 +301,7 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 		input = new Keyboard(server, device, nullptr);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
+		return;
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
 		break;
@@ -317,9 +317,8 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 
 	server->_inputs.push_back(input);
 
-	Object object{ .input = input };
 	for (auto & cb : server->_on_new_input) {
-		cb(listener, data, object);
+		cb(input, device, server);
 	}
 }
 

@@ -11,7 +11,7 @@ namespace wlkit {
 
 class Root {
 public:
-	typedef std::function<void(Root&)> Handler;
+	using Handler = std::function<void(Root&)>;
 
 private:
 	Server * _server;

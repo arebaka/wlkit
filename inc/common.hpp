@@ -1,6 +1,9 @@
 #pragma once
+#ifndef WLKIT_COMMON_H
+#define WLKIT_COMMON_H
 
 #include <cstdint>
+#include <variant>
 #include <functional>
 #include <list>
 #include <memory>
@@ -26,7 +29,7 @@ extern "C" {
 
 namespace wlkit {
 
-typedef uint32_t Geo;
+using Geo = uint32_t;
 
 class Server;
 class Root;
@@ -41,21 +44,22 @@ class Layout;
 class Window;
 class WindowsHistory;
 class Input;
+
 class Keyboard;
 
-union Object {
-	Server * server;
-	Root * root;
-	Node * node;
-	Cursor * cursor;
-	Output * output;
-	Render * render;
-	Workspace * workspace;
-	Window * window;
-	Input * input;
-	Keyboard * keyboard;
-};
-
-using NotifyHandler = std::function<void(struct wl_listener * listener, void * data, Object & object)>;
+using Object = std::variant<
+	Server*,
+	Root*,
+	Node*,
+	Cursor*,
+	Output*,
+	Render*,
+	Workspace*,
+	Window*,
+	Input*,
+	Keyboard*
+>;
 
 }
+
+#endif // WLKIT_COMMON_H

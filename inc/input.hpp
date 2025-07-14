@@ -10,7 +10,7 @@ namespace wlkit {
 
 class Input {
 public:
-	typedef std::function<void(Input&)> Handler;
+	using Handler = std::function<void(Input&)>;
 
 	enum class Type {
 		KEYBOARD,
@@ -41,7 +41,11 @@ public:
 		const Handler & callback);
 	virtual ~Input();
 
+	virtual bool is_keyboard() const;
+	virtual Keyboard * as_keyboard();
+
 	[[nodiscard]] Server * server() const;
+	[[nodiscard]] Type type() const;
 	[[nodiscard]] struct wlr_input_device * device() const;
 	[[nodiscard]] void * data() const;
 

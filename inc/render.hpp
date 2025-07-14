@@ -11,7 +11,7 @@ namespace wlkit {
 
 class Render {
 public:
-	typedef std::function<void(Render&)> Handler;
+	using Handler = std::function<void(Render&)>;
 
 private:
 	Output * _output;

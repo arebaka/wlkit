@@ -36,7 +36,9 @@ namespace wlkit {
 
 class Server {
 public:
-	typedef std::function<void(Server&)> Handler;
+	using Handler = std::function<void(Server&)>;
+	using NewOutputHandler = std::function<void(Output * output, wlr_output * wlr_output, Server * server)>;
+	using NewInputHandler = std::function<void(Input * input, wlr_input_device * device, Server * server)>;
 
 private:
 	struct wl_display * _display;
@@ -91,8 +93,8 @@ private:
 	std::list<Handler> _on_destroy;
 	std::list<Handler> _on_start;
 	std::list<Handler> _on_stop;
-	std::list<NotifyHandler> _on_new_output;
-	std::list<NotifyHandler> _on_new_input;
+	std::list<NewOutputHandler> _on_new_output;
+	std::list<NewInputHandler> _on_new_input;
 
 	struct wl_listener _destroy_listener;
 	struct wl_listener _renderer_lost_listener;
@@ -149,8 +151,8 @@ public:
 	Server & on_destroy(const Handler & handler);
 	Server & on_start(const Handler & handler);
 	Server & on_stop(const Handler & handler);
-	Server & on_new_output(const NotifyHandler & handler);
-	Server & on_new_input(const NotifyHandler & handler);
+	Server & on_new_output(const NewOutputHandler & handler);
+	Server & on_new_input(const NewInputHandler & handler);
 
 private:
 	static void _handle_destroy(struct wl_listener * listener, void * data);

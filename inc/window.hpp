@@ -6,6 +6,7 @@ extern "C" {
 // #undef class
 // #define class class_field
 // #include <wlr/xwayland/xwayland.h>
+// #undef class
 // #pragma pop_macro("class")
 }
 
@@ -15,7 +16,7 @@ namespace wlkit {
 
 class Window {
 public:
-	typedef std::function<void(Window&)> Handler;
+	using Handler = std::function<void(Window&)>;
 
 private:
 	Server * _server;

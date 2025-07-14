@@ -12,23 +12,24 @@ namespace wlkit {
 
 class Output {
 public:
-	typedef std::function<void(Output&)> Handler;
+	using Handler = std::function<void(Output&)>;
+	using FrameHandler = std::function<void(Output * output, struct wlr_output * wlr_output, Render * render)>;
 
-	typedef float Scale;
-	typedef enum wl_output_transform Transform;
-	typedef uint32_t RenderFormat;
-	typedef enum wl_output_subpixel Subpixel;
-	typedef struct wlr_buffer* Buffer;
-	typedef pixman_region32_t* PixmanRegion;
-	typedef struct wlr_output_layer_state* LayerStates;
-	typedef struct wlr_drm_syncobj_timeline* DRMSyncobjTimeline;
-	typedef uint64_t TimelinePoint;
-	typedef uint32_t ModeRefresh;
-	typedef size_t GammaLUTRampSize;
-	typedef uint16_t GammaLUTComponent;
-	typedef uint32_t CommitSeq;
+	using Scale = float;
+	using Transform = enum wl_output_transform;
+	using RenderFormat = uint32_t;
+	using Subpixel = enum wl_output_subpixel;
+	using Buffer = struct wlr_buffer*;
+	using PixmanRegion = pixman_region32_t*;
+	using LayerStates = struct wlr_output_layer_state*;
+	using DRMSyncobjTimeline = struct wlr_drm_syncobj_timeline*;
+	using TimelinePoint = uint64_t;
+	using ModeRefresh = uint32_t;
+	using GammaLUTRampSize = size_t;
+	using GammaLUTComponent = uint16_t;
+	using CommitSeq = uint32_t;
 
-	typedef struct {
+	using State = struct {
 		bool enabled;
 		Scale scale;
 		Transform transform;
@@ -43,7 +44,7 @@ public:
 		TimelinePoint wait_src_point;
 		DRMSyncobjTimeline signal_timeline;
 		TimelinePoint signal_dst_point;
-	} State;
+	};
 
 	typedef struct {
 		Geo width;
@@ -74,7 +75,7 @@ private:
 
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
-	std::list<NotifyHandler> _on_frame;
+	std::list<FrameHandler> _on_frame;
 
 	struct wl_listener _destroy_listener;
 	struct wl_listener _frame_listener;
@@ -130,7 +131,7 @@ public:
 	// TODO setters
 
 	Output & on_destroy(const Handler & handler);
-	Output & on_frame(const NotifyHandler & handler);
+	Output & on_frame(const FrameHandler & handler);
 
 private:
 	static void _handle_destroy(struct wl_listener * listener, void * data);

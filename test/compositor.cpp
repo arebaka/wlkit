@@ -1,15 +1,24 @@
 #include <iostream>
 #include <cstdlib>
 
-#include <wayland-server-protocol.h>
-#include <wlkit/wlkit.hpp>
+#include <wlkit/server.hpp>
+#include <wlkit/output.hpp>
+#include <wlkit/render.hpp>
+#include <wlkit/device/keyboard.hpp>
 
 extern "C" {
 #include <wlr/types/wlr_seat.h>
 #include <wlr/render/swapchain.h>
 #include <wlr/render/wlr_texture.h>
-}
+#include <wlr/types/wlr_keyboard.h>
+#include <wlr/types/wlr_input_device.h>
+#include <wlr/render/wlr_renderer.h>
+#include <wlr/render/wlr_texture.h>
+#include <wlr/types/wlr_output.h>
 
+
+#include <xkbcommon/xkbcommon.h>
+}
 
 void setup_portal_env(const wlkit::Server & server) {
 	(void)server;  // unused for now
@@ -18,44 +27,32 @@ void setup_portal_env(const wlkit::Server & server) {
 	setenv("XDG_SESSION_DESKTOP", "wlkit", 1);
 }
 
-void on_destroy(const wlkit::Server & server) {
-	char info[256];
-	// snprintf(info, sizeof(info),
-	// 	"Exit; Out:%u In:%u WS:%u Win:%u Seat:%s\n",
-	// 	&server._outputs.size(),
-	// 	&server._inputs.size(),
-	// 	&server._workspaces.size(),
-	// 	&server._windows.size(),
-	// 	server.seat()->name
-	// );
-	std::cout << info;
-}
-
 // void create_default_workspace(struct wlkit::Server & server) {
 // 	server.set_current_workspace = new wlkit::Workspace(server, &wlkit_layout_floating, 1, "default");
 // }
 
-void dummy_draw_frame(struct wl_listener * listener, void * data, wlkit::Object object) {
-	auto render = object.render;
+void dummy_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
+	struct wlr_render_pass * pass = render->pass();
+
 	struct wlr_render_rect_options rect_opts = {
 		.box = { 0, 0, 100, 100 },
 		.color = { 1.0f, 0.0f, 0.0f, 1.0f },
 	};
-	wlr_render_pass_add_rect(render->pass(), &rect_opts);
+	wlr_render_pass_add_rect(pass, &rect_opts);
+
+	// draw_textured_label(pass, wlr_output->renderer, "Hello, Wayland!", 50, 50);
 }
 
-void ai_test_draw_frame(struct wl_listener * listener, void * data, wlkit::Object object) {
-	auto render = object.render;
-	auto output = render->output();
-	auto wlr_output = output->wlr_output();
+void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render
+) {
 	struct wlr_render_pass * pass = render->pass();
 
 	// 5. Добавим заливку (фон)
 	struct wlr_render_rect_options rect_opts = {
 		.box = {
 			.x = 0, .y = 0,
-			.width = wlr_output->width,
-			.height = wlr_output->height,
+			.width = output->width(),
+			.height = output->height(),
 		},
 		.color = { 0.48828125f, 0.5f, 0.71875f, 1.0f },
 	};
@@ -79,16 +76,16 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, wlkit::Objec
 	struct wlr_render_rect_options bg_opts = {
 		.box = {
 			.x = 0, .y = 0,
-			.width = wlr_output->width,
-			.height = wlr_output->height,
+			.width = output->width(),
+			.height = output->height(),
 		},
 		.color = { bg_r, bg_g, bg_b, 1.0f },
 	};
 	wlr_render_pass_add_rect(pass, &bg_opts);
 
 	// 4. Анимированные круги (имитация)
-	int center_x = wlr_output->width / 2;
-	int center_y = wlr_output->height / 2;
+	int center_x = output->width() / 2;
+	int center_y = output->height() / 2;
 
 	for (int i = 0; i < 5; i++) {
 		float angle = time_sec * 0.5f + i * 1.26f; // 1.26 ≈ 2π/5
@@ -135,9 +132,9 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, wlkit::Objec
 
 	// 5. Волновой эффект внизу
 	int wave_height = 60;
-	int wave_y = wlr_output->height - wave_height - 50;
+	int wave_y = output->height() - wave_height - 50;
 
-	for (int x = 0; x < wlr_output->width; x += 4) {
+	for (int x = 0; x < output->width(); x += 4) {
 		float wave_offset = sinf((x * 0.01f) + (time_sec * 2.0f)) * 20.0f;
 		int bar_height = wave_height + (int)wave_offset;
 
@@ -217,8 +214,8 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, wlkit::Objec
 
 	// 8. Частицы в углах
 	for (int corner = 0; corner < 4; corner++) {
-		int corner_x = (corner % 2) * (wlr_output->width - 100) + 50;
-		int corner_y = (corner / 2) * (wlr_output->height - 100) + 50;
+		int corner_x = (corner % 2) * (output->width() - 100) + 50;
+		int corner_y = (corner / 2) * (output->height() - 100) + 50;
 
 		for (int p = 0; p < 3; p++) {
 			float particle_angle = time_sec * 1.5f + corner * 1.57f + p * 2.1f;
@@ -241,13 +238,14 @@ void ai_test_draw_frame(struct wl_listener * listener, void * data, wlkit::Objec
 	}
 }
 
-void setup_output(struct wl_listener * listener, void * data, wlkit::Object object) {
-	auto wlr_output = static_cast<struct wlr_output*>(data);
-	auto output = object.output;
+void setup_draw(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Server * server) {
+	// output->on_frame(dummy_draw_frame);
+	output->on_frame(ai_test_draw_frame);
+}
 
-	auto builder = new wlkit::OutputStateBuilder();
-	auto state = builder->
-		enabled(true)
+void setup_output(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Server * server) {
+	auto state = wlkit::OutputStateBuilder{}
+		.enabled(true)
 		.scale(1.0f)
 		.transform(WL_OUTPUT_TRANSFORM_NORMAL)
 		.adaptive_sync_enabled(true)
@@ -255,25 +253,73 @@ void setup_output(struct wl_listener * listener, void * data, wlkit::Object obje
 		.build();
 
 	output->
-		setup_state(state)
+		setup_state(state.get())
 		.setup_preferred_mode()
 		.commit_state();
 }
 
-void setup_draw(struct wl_listener * listener, void * data, wlkit::Object object) {
-	// object.output->on_frame(dummy_draw_frame);
-	object.output->on_frame(ai_test_draw_frame);
+void handle_key( struct wlr_keyboard_key_event * event, wlkit::Keyboard * keyboard, struct wlr_keyboard * kbd) {
+	auto sym = xkb_state_key_get_one_sym(kbd->xkb_state, event->keycode + 8);
+
+	char name[64];
+	if (xkb_keysym_get_name(sym, name, sizeof(name)) > 0) {
+		std::cout << "Нажата клавиша: " << name << std::endl;
+	} else {
+		std::cout << "Нажата неизвестная клавиша (keysym=" << sym << ")" << std::endl;
+	}
+}
+
+void setup_input( wlkit::Input * input, struct wlr_input_device * device, wlkit::Server * server) {
+	if (input->is_keyboard()) {
+		auto keyboard = input->as_keyboard();
+		keyboard->
+			set_rules("base")
+			.set_model("pc105")
+			.set_layout("us,ru")
+			.set_variant("")
+			.set_options("ctrl:nocaps,grp:alt_shift_toggle,grp_led:caps,lv3:ralt_switch,altwin:meta_alt,compose:rctrl,numpad:pc,nbsp:level3,terminate:ctrl_alt_bksp")
+			.compile_keymap()
+			.on_key_pressed([](auto event, auto keyboard, auto kbd) {
+				std::cout << "Key pressed: code=" << event->keycode << " state=" << event->state << std::endl;
+			})
+			.on_key_released([](auto event, auto keyboard, auto kbd) {
+				auto sym = xkb_state_key_get_one_sym(kbd->xkb_state, event->keycode + 8);
+				char name[64];
+				xkb_keysym_get_name(sym, name, sizeof(name));
+				std::cout << "Key released: code=" << event->keycode << " name=" << name  << std::endl;
+			})
+			.on_mod([](auto mods, auto keyboard, auto kbd) {
+				std::cout << "Modifiers changed:"
+					<< " depressed=" << mods->depressed
+					<< " latched="   << mods->latched
+					<< " locked="    << mods->locked
+					<< " group="     << std::dec << mods->group
+					<< std::endl;
+			})
+			.on_key_pressed([](auto event, auto keyboard, auto kbd) {
+				auto server = keyboard->server();
+				auto sym = xkb_state_key_get_one_sym(kbd->xkb_state, event->keycode + 8);
+				if (sym == XKB_KEY_Escape) {
+					std::cout << "Escape!" << std::endl;
+					server->stop();
+				}
+			});
+	}
 }
 
 int main() {
 	struct wl_display * display = wl_display_create();
 	struct wlr_seat * seat = wlr_seat_create(display, "seat0");
 
-	auto server = new wlkit::Server(*display, *seat, setup_portal_env);
+	auto server = new wlkit::Server(display, seat, setup_portal_env);
 	server->
-		on_destroy(on_destroy)
-		.on_new_output(setup_draw)
+		on_new_output([](auto output, auto wlr_output, auto server) {
+			// output->on_frame(dummy_draw_frame);
+			output->on_frame(ai_test_draw_frame);
+		})
 		.on_new_output(setup_output)
-		.start()
-		.stop();
+		.on_new_input(setup_input)
+		.start();
+
+	server->stop();
 }

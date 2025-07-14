@@ -18,8 +18,21 @@ Input::~Input() {
 	}
 }
 
+
+bool Input::is_keyboard() const {
+	return false;
+}
+
+Keyboard * Input::as_keyboard() {
+	return nullptr;
+}
+
 Server * Input::server() const {
 	return _server;
+}
+
+Input::Type Input::type() const {
+	return _type;
 }
 
 struct wlr_input_device * Input::device() const {

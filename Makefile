@@ -9,7 +9,7 @@ BUILDDIR = build
 
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS = $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
-HEADERS = $(wildcard $(INCDIR)/*.hpp)
+HEADERS = $(wildcard $(INCDIR)/*.hpp $(INCDIR)/device/*.hpp)
 
 TARGET = $(BUILDDIR)/libwlkit.so
 STATIC_TARGET = $(BUILDDIR)/libwlkit.a
@@ -56,9 +56,11 @@ clean:
 install: $(TARGET) $(STATIC_TARGET)
 	install -d $(DESTDIR)/usr/lib
 	install -d $(DESTDIR)/usr/include/wlkit
+	install -d $(DESTDIR)/usr/include/wlkit/device
 	install -m 644 $(TARGET) $(DESTDIR)/usr/lib/
 	install -m 644 $(STATIC_TARGET) $(DESTDIR)/usr/lib/
 	install -m 644 $(INCDIR)/*.hpp $(DESTDIR)/usr/include/wlkit/
+	install -m 644 $(INCDIR)/device/*.hpp $(DESTDIR)/usr/include/wlkit/device/
 
 uninstall:
 	rm -f $(DESTDIR)/usr/lib/libwlkit.so

@@ -6,8 +6,8 @@ namespace wlkit {
 
 class Node {
 public:
-	typedef std::function<void(Node&)> Handler;
-	typedef uint32_t ID;
+	using Handler = std::function<void(Node&)>;
+	using ID = uint32_t;
 
 	typedef enum Type {
 		ROOT,

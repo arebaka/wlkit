@@ -11,8 +11,8 @@ namespace wlkit {
 
 class Cursor {
 public:
-	typedef std::function<void(Cursor&)> Handler;
-	typedef uint32_t Size;
+	using Handler = std::function<void(Cursor&)>;
+	using Size = uint32_t;
 
 private:
 	Root * _root;
