@@ -39,14 +39,18 @@ public:
 		const Handler & callback);
 	~Workspace();
 
+	Workspace & add_window(Window * window);
+	Workspace & remove_window(Window * window);
+	Workspace & focus_window(Window * window);
+
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] Layout * layout() const;
 	[[nodiscard]] ID id() const;
-	[[nodiscard]] const char * name();
-	[[nodiscard]] std::list<Window*> windows();
-	[[nodiscard]] WindowsHistory * windows_history();
-	[[nodiscard]] Window * focused_window();
-	[[nodiscard]] void * data();
+	[[nodiscard]] const char * name() const;
+	[[nodiscard]] std::list<Window*> windows() const;
+	[[nodiscard]] WindowsHistory * windows_history() const;
+	[[nodiscard]] Window * focused_window() const;
+	[[nodiscard]] void * data() const;
 
 	// TODO setters
 
@@ -68,6 +72,7 @@ public:
 	const std::list<Workspace*> & history() const;
 	WorkspacesHistory & shift(Workspace * workspace);
 	WorkspacesHistory & remove(Workspace * workspace);
+	Workspace * top() const;
 	Workspace * previous() const;
 };
 

@@ -128,6 +128,7 @@ public:
 	[[nodiscard]] bool non_desktop() const;
 	[[nodiscard]] CommitSeq commit_seq() const;
 
+	Output & set_workspace(Workspace * workspace);
 	// TODO setters
 
 	Output & on_destroy(const Handler & handler);

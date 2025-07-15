@@ -13,12 +13,12 @@ extern "C" {
 #include <wlr/render/wlr_texture.h>
 #include <wlr/types/wlr_output.h>
 
-
 #include <xkbcommon/xkbcommon.h>
 }
 
 static wlkit::Geo cursor_x = 0, cursor_y = 0;
 static bool cursor_state = 0;
+static wlkit::Window * moving_window = nullptr;
 
 void setup_portal_env(const wlkit::Server * server) {
 	(void)server;  // unused for now
@@ -254,21 +254,18 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 	// 3) Окна на текущем воркспейсе
 	// ––––––––––––––––––––––––––––––––––––––––––
 	for (auto win : server->windows()) {
-		if (win->workspace() != output->current_workspace()) {
-			continue;
-		}
 		// получаем геометрию окна
 		int x = win->x();
-		int y = win->y() + tab_h;        // сдвиг вниз под панель
+		int y = win->y() + tab_h;  // сдвиг вниз под панель
 		int w = win->width();
 		int h = win->height();
 
-		bool mapped = win->mapped();
+		bool focused = win == win->workspace()->focused_window();
 		struct wlr_render_rect_options w_opts = {
 			.box = { .x = x, .y = y, .width = w, .height = h },
-			.color = { mapped ? 0.8f : 0.5f, mapped ? 0.8f : 0.5f, mapped ? 0.2f : 0.5f, mapped ? 0.8f : 0.5f }
+			.color = { focused ? 0.8f : 0.5f, focused ? 0.8f : 0.5f, focused ? 0.2f : 0.5f, focused ? 0.8f : 0.5f }
 		};
-		// wlr_render_pass_add_rect(pass, &w_opts);
+		wlr_render_pass_add_rect(pass, &w_opts);
 	}
 }
 
@@ -297,17 +294,6 @@ void setup_output(wlkit::Output * output, struct wlr_output * wlr_output, wlkit:
 		setup_state(state.get())
 		.setup_preferred_mode()
 		.commit_state();
-}
-
-void handle_key( struct wlr_keyboard_key_event * event, wlkit::Keyboard * keyboard, struct wlr_keyboard * kbd) {
-	auto sym = xkb_state_key_get_one_sym(kbd->xkb_state, event->keycode + 8);
-
-	char name[64];
-	if (xkb_keysym_get_name(sym, name, sizeof(name)) > 0) {
-		std::cout << "Нажата клавиша: " << name << std::endl;
-	} else {
-		std::cout << "Нажата неизвестная клавиша (keysym=" << sym << ")" << std::endl;
-	}
 }
 
 void setup_keyboard(wlkit::Keyboard * keyboard) {
@@ -354,6 +340,9 @@ void setup_pointer(wlkit::Pointer * pointer) {
 		on_motion([](auto pointer, auto dx, auto dy, auto unaccel_dx, auto unaccel_dy) {
 			cursor_x += dx;
 			cursor_y += dy;
+			if (moving_window) {
+				moving_window->move(moving_window->x() + dx, moving_window->y() + dy);
+			}
 
 			auto output = pointer->server()->outputs().front();
 			if (cursor_x < 0) {
@@ -372,6 +361,16 @@ void setup_pointer(wlkit::Pointer * pointer) {
 		.on_button([](auto pointer, auto button, auto state) {
 			if (button == 272) {
 				cursor_state = state;
+				if (state == 1) {
+					auto output = *pointer->server()->outputs().begin();
+					auto window = output->window_at(cursor_x, cursor_y);
+					if (window) {
+						output->current_workspace()->focus_window(window);
+						moving_window = window;
+					}
+				} else {
+					moving_window = nullptr;
+				}
 			}
 		});
 }
@@ -385,20 +384,28 @@ void setup_input(wlkit::Input * input, struct wlr_input_device * device, wlkit::
 	}
 }
 
+void create_default_workspace(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Server * server) {
+	auto layout = new wlkit::Layout("tiling", nullptr);
+	auto workspace = new wlkit::Workspace(server, layout, 1, "default", nullptr);
+	new wlkit::Workspace(server, layout, 2, "other", nullptr);
+	auto window1 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 1", "app name", nullptr);
+	auto window2 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 2", "app name", nullptr);
+
+	window1->move(0, 0).resize(300, 400).map();
+	window2->move(200, 100).resize(400, 500).map();
+
+	workspace->focus_window(window1);
+	workspace->focus_window(window2);
+	output->set_workspace(workspace);
+}
+
 int main() {
 	auto display = wl_display_create();
 	auto seat = wlr_seat_create(display, "seat0");
 
-	setenv("WLR_BACKENDS", "drm", /*overwrite=*/1);
 	auto server = wlkit::Server(display, seat, setup_portal_env);
 
 	server
-		.on_start([](auto server) {
-			auto layout = new wlkit::Layout("tiling", nullptr);
-			auto workspace = new wlkit::Workspace(server, layout, 1, "default", nullptr);
-			auto window1 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 1", "app name", nullptr);
-			auto window2 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 2", "app name", nullptr);
-		})
 		.on_stop([](auto server) {
 			std::cout
 				<< "outputs: " << server->outputs().size() << std::endl
@@ -414,6 +421,7 @@ int main() {
 			output->on_frame(draw_cursor);
 		})
 		.on_new_output(setup_output)
+		.on_new_output(create_default_workspace)
 		.on_new_input(setup_input)
 		.start();
 }

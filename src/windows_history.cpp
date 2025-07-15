@@ -22,8 +22,11 @@ WindowsHistory & WindowsHistory::shift(Window * window) {
 	return *this;
 }
 
-
 WindowsHistory & WindowsHistory::remove(Window * window) {
+	if (!window) {
+		return *this;
+	}
+
 	auto it = _pos.find(window);
 	if (it == _pos.end()) {
 		return *this;
@@ -34,10 +37,37 @@ WindowsHistory & WindowsHistory::remove(Window * window) {
 	return *this;
 }
 
+Window * WindowsHistory::top() const {
+	return _order.empty() ? nullptr : *_order.begin();
+}
 
 Window * WindowsHistory::previous() const {
 	if (_order.size() < 2) {
 		return nullptr;
 	}
 	return *std::next(_order.begin());
+}
+
+WindowsHistory::Iterator WindowsHistory::begin() {
+	return _order.begin();
+}
+
+WindowsHistory::Iterator WindowsHistory::end() {
+	return _order.end();
+}
+
+WindowsHistory::ConstIterator WindowsHistory::begin() const {
+	return _order.begin();
+}
+
+WindowsHistory::ConstIterator WindowsHistory::end() const {
+	return _order.end();
+}
+
+WindowsHistory::ConstIterator WindowsHistory::cbegin() const {
+	return _order.cbegin();
+}
+
+WindowsHistory::ConstIterator WindowsHistory::cend() const {
+	return _order.cend();
 }

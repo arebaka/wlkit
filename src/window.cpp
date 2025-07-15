@@ -15,6 +15,10 @@ _mapped(false), _data(nullptr) {
 	_workspaces_history = new WorkspacesHistory();
 
 	_server->add_window(this);
+	if (_workspace) {
+		_workspace->add_window(this);
+		_workspaces_history->shift(_workspace);
+	}
 
 	_destroy_listener.notify = _handle_destroy;
 	if (_xdg_surface) {
@@ -42,11 +46,25 @@ Window::~Window() {
 		cb(this);
 	}
 
+	close();
+
 	delete _workspaces_history;
 	free(_app_id);
 	free(_title);
 }
 
+Window & Window::close() {
+	if (_workspace) {
+		_workspace->remove_window(this);
+	}
+	_workspace = nullptr;
+
+	if (_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		// wlr_xdg_toplevel_send_close(_xdg_surface->toplevel);
+	}
+
+	return *this;
+}
 
 Window & Window::move(Geo x, Geo y) {
 	_x = x;
@@ -70,16 +88,18 @@ Window & Window::resize(Geo width, Geo height) {
 	return *this;
 }
 
-Window & Window::close() {
-	if (_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-		// wlr_xdg_toplevel_send_close(_xdg_surface->toplevel);
-	}
+Window & Window::map() {
+	_mapped = true;
+	return *this;
+}
 
+Window & Window::unmap() {
+	_mapped = false;
 	return *this;
 }
 
 Window & Window::maximize() {
-	_maximized = !_maximized;
+	_maximized = true;
 
 	if (_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
 		// wlr_xdg_toplevel_set_maximized(_xdg_surface->toplevel, _maximized);
@@ -88,6 +108,11 @@ Window & Window::maximize() {
 		// wlr_foreign_toplevel_handle_v1_set_maximized(_foreign_toplevel, _maximized);
 	// }
 
+	return *this;
+}
+
+Window & Window::unmaximize() {
+	_maximized = false;
 	return *this;
 }
 
@@ -101,8 +126,13 @@ Window & Window::minimize() {
 	return *this;
 }
 
+Window & Window::unminimize() {
+	_minimized = false;
+	return *this;
+}
+
 Window & Window::fullscreen() {
-	_fullscreen = !_fullscreen;
+	_fullscreened = true;
 
 	if (_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
 		// wlr_xdg_toplevel_set_fullscreen(_xdg_surface->toplevel, _fullscreen);
@@ -111,6 +141,11 @@ Window & Window::fullscreen() {
 		// wlr_foreign_toplevel_handle_v1_set_fullscreen(_foreign_toplevel, _fullscreen);
 	// }
 
+	return *this;
+}
+
+Window & Window::unfullscreen() {
+	_fullscreened = false;
 	return *this;
 }
 
@@ -162,8 +197,8 @@ bool Window::maximized() const {
 	return _maximized;
 }
 
-bool Window::fullscreen() const {
-	return _fullscreen;
+bool Window::fullscreened() const {
+	return _fullscreened;
 }
 
 void * Window::data() const {
@@ -177,6 +212,45 @@ struct wlr_xdg_surface * Window::xdg_surface() const {
 struct wlr_xwayland_surface * Window::xwayland_surface() const {
 	return _xwayland_surface;
 }
+
+Window & Window::set_workspace(Workspace * workspace) {
+	if (_workspace) {
+		_workspace->remove_window(this);
+	}
+
+	_workspace = workspace;
+	_workspaces_history->shift(_workspace);
+
+	return *this;
+}
+
+Window & Window::set_title(const char * title) {
+	free(_title);
+	_title = strdup(title ? title : "");
+	return *this;
+}
+
+Window & Window::set_app_id(const char * app_id) {
+	free(_app_id);
+	_app_id = strdup(app_id ? app_id : "");
+	return *this;
+}
+
+Window & Window::set_data(void * data) {
+	_data = data;
+	return *this;
+}
+
+Window & Window::set_xdg_surface(struct wlr_xdg_surface * xdg_surface) {
+	_xdg_surface = xdg_surface;
+	return *this;
+}
+
+Window & Window::set_xwayland_surface(struct wlr_xwayland_surface * xwayland_surface) {
+	_xwayland_surface = xwayland_surface;
+	return *this;
+}
+
 
 Window & Window::on_destroy(const Handler & handler) {
 	if (handler) {

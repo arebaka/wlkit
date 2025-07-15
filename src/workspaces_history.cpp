@@ -34,6 +34,12 @@ WorkspacesHistory & WorkspacesHistory::remove(Workspace * workspace) {
 	return *this;
 }
 
+Workspace * WorkspacesHistory::top() const {
+	if (_order.size() < 1) {
+		return nullptr;
+	}
+	return *_order.begin();
+}
 
 Workspace * WorkspacesHistory::previous() const {
 	if (_order.size() < 2) {

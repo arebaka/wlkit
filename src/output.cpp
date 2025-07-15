@@ -115,9 +115,7 @@ Output & Output::commit_state() {
 }
 
 Window * Output::window_at(Geo x, Geo y) {
-	Window * window;
-
-	for (auto & window : _current_workspace->windows()) {
+	for (Window * window : *_current_workspace->windows_history()) {
 		if (window->mapped() &&
 			x >= window->x() && x < window->x() + window->width() &&
 			y >= window->y() && y < window->y() + window->height()
@@ -247,6 +245,12 @@ bool Output::non_desktop() const {
 
 Output::CommitSeq Output::commit_seq() const {
 	return _wlr_output->commit_seq;
+}
+
+Output & Output::set_workspace(Workspace * workspace) {
+	_current_workspace = workspace;
+	_workspaces_history->shift(workspace);
+	return *this;
 }
 
 Output & Output::on_destroy(const Handler & handler) {

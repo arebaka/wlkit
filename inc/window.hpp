@@ -29,7 +29,7 @@ private:
 	// struct wlr_foreign_toplevel_handle_v1 * _foreign_toplevel;
 
 	Geo _x, _y, _width, _height;
-	bool _mapped, _minimized, _maximized, _fullscreen;
+	bool _mapped, _minimized, _maximized, _fullscreened;
 	WorkspacesHistory * _workspaces_history;
 	void * _data;
 
@@ -49,12 +49,17 @@ public:
 		const Handler & callback);
 	~Window();
 
+	Window & close();
 	Window & move(Geo x, Geo y);
 	Window & resize(Geo width, Geo height);
-	Window & close();
+	Window & map();
+	Window & unmap();
 	Window & maximize();
+	Window & unmaximize();
 	Window & minimize();
+	Window & unminimize();
 	Window & fullscreen();
+	Window & unfullscreen();
 
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] Workspace * workspace() const;
@@ -68,13 +73,18 @@ public:
 	[[nodiscard]] bool mapped() const;
 	[[nodiscard]] bool minimized() const;
 	[[nodiscard]] bool maximized() const;
-	[[nodiscard]] bool fullscreen() const;
+	[[nodiscard]] bool fullscreened() const;
 	[[nodiscard]] void * data() const;
 	[[nodiscard]] struct wlr_xdg_surface * xdg_surface() const;
 	[[nodiscard]] struct wlr_xwayland_surface * xwayland_surface() const;
 	// [[nodiscard]] struct wlr_foreign_toplevel_handle_v1 * foreign_toplevel() const;
 
-	// TODO setters
+	Window & set_workspace(Workspace * workspace);
+	Window & set_title(const char * title);
+	Window & set_app_id(const char * app_id);;
+	Window & set_data(void * data);
+	Window & set_xdg_surface(struct wlr_xdg_surface * xdg_surface);
+	Window & set_xwayland_surface(struct wlr_xwayland_surface * xwayland_surface);
 
 	Window & on_destroy(const Handler & handler);
 
@@ -83,6 +93,10 @@ private:
 };
 
 class WindowsHistory {
+public:
+	using Iterator = std::list<Window*>::iterator;
+	using ConstIterator = std::list<Window*>::const_iterator;
+
 private:
 	std::list<Window*> _order;
 	std::unordered_map<Window*, std::list<Window*>::iterator> _pos;
@@ -92,9 +106,19 @@ public:
 	~WindowsHistory();
 
 	const std::list<Window*> & history() const;
+
 	WindowsHistory & shift(Window * workspace);
 	WindowsHistory & remove(Window * workspace);
+
+	Window * top() const;
 	Window * previous() const;
+
+	Iterator begin();
+	Iterator end();
+	ConstIterator begin() const;
+	ConstIterator end() const;
+	ConstIterator cbegin() const;
+	ConstIterator cend() const;
 };
 
 }

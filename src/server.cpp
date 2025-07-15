@@ -5,6 +5,8 @@
 #include "device/keyboard.hpp"
 #include "device/pointer.hpp"
 
+#include <algorithm>
+
 extern "C" {
 #include <wlr/types/wlr_subcompositor.h>
 }
@@ -166,6 +168,33 @@ Server & Server::stop() {
 	return *this;
 }
 
+Workspace * Server::get_workspace_by_id(Workspace::ID id) {
+	auto workspace = std::find_if(_workspaces.begin(), _workspaces.end(), [=](auto ws) {
+		return ws->id() == id;
+	});
+	return workspace == _workspaces.end() ? nullptr : *workspace;
+}
+
+Server & Server::add_workspace(Workspace * workspace) {
+	_workspaces.push_back(workspace);
+	return *this;
+}
+
+Server & Server::add_window(Window * window) {
+	_windows.push_back(window);
+	return *this;
+}
+
+Server & Server::remove_workspace(Workspace * workspace) {
+	_workspaces.remove(workspace);
+	return *this;
+}
+
+Server & Server::remove_window(Window * window) {
+	_windows.remove(window);
+	return *this;
+}
+
 wl_display * Server::display() const {
 	return _display;
 }
@@ -244,16 +273,6 @@ wlr_xdg_shell * Server::xdg_shell() const {
 
 Server & Server::set_data(void * data) {
 	_data = data;
-	return *this;
-}
-
-Server & Server::add_workspace(Workspace * workspace) {
-	_workspaces.push_back(workspace);
-	return *this;
-}
-
-Server & Server::add_window(Window * window) {
-	_windows.push_back(window);
 	return *this;
 }
 

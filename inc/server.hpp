@@ -31,6 +31,7 @@ extern "C" {
 }
 
 #include "common.hpp"
+#include "workspace.hpp"
 
 namespace wlkit {
 
@@ -121,10 +122,11 @@ public:
 
 	Server & start();
 	Server & stop();
-	// Workspace * get_workspace_by_id(Workspace::ID id);
-
+	Workspace * get_workspace_by_id(Workspace::ID id);
 	Server & add_workspace(Workspace * workspace);
 	Server & add_window(Window * window);
+	Server & remove_workspace(Workspace * workspace);
+	Server & remove_window(Window * window);
 
 	[[nodiscard]] wl_display * display() const;
 	[[nodiscard]] wl_event_loop * event_loop() const;
