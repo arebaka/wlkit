@@ -182,3 +182,7 @@ wlr_render_pass_add_texture(pass, cursor_tex, &co);
 - `wlkit::Output` gives access to `.server()`, `.current_workspace()`, `.workspaces()`, `.width()`, `.height()`, etc.
 - `wlkit::Workspace` gives access to `.server()`, `.layout()`, `.id()`, `.name()`, `.focused_window()`, `.window()`, etc.
 - `wlkit::Window` gives access to `.server()`, `.workspace()`, `.title()`, `.app_id()`, `.x()`, `.y()`, `.width()`, `.height()`, `.mapped()`, etc.
+
+---
+
+https://github.com/user-attachments/assets/786b9ce1-6e4c-4249-9161-346d3877e97c
