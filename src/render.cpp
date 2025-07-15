@@ -22,13 +22,13 @@ _output(output), _data(nullptr) {
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Render::~Render() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
 
 	delete _state;
@@ -73,6 +73,7 @@ Render & Render::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));
 	}
+    return *this;
 }
 
 void Render::_handle_destroy(struct wl_listener * listener, void * data) {

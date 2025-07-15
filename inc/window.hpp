@@ -16,7 +16,7 @@ namespace wlkit {
 
 class Window {
 public:
-	using Handler = std::function<void(Window&)>;
+	using Handler = std::function<void(Window*)>;
 
 private:
 	Server * _server;
@@ -26,7 +26,6 @@ private:
 	char * _title;
 	char * _app_id;
 
-	struct wlr_surface * _surface;
 	// struct wlr_foreign_toplevel_handle_v1 * _foreign_toplevel;
 
 	Geo _x, _y, _width, _height;
@@ -59,7 +58,7 @@ public:
 
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] Workspace * workspace() const;
-	[[nodiscard]] WorkspacesHistory * workspace_history() const;
+	[[nodiscard]] WorkspacesHistory * workspaces_history() const;
 	[[nodiscard]] const char * title() const;
 	[[nodiscard]] const char * app_id() const;
 	[[nodiscard]] Geo x() const;
@@ -73,7 +72,6 @@ public:
 	[[nodiscard]] void * data() const;
 	[[nodiscard]] struct wlr_xdg_surface * xdg_surface() const;
 	[[nodiscard]] struct wlr_xwayland_surface * xwayland_surface() const;
-	[[nodiscard]] struct wlr_surface * surface() const;
 	// [[nodiscard]] struct wlr_foreign_toplevel_handle_v1 * foreign_toplevel() const;
 
 	// TODO setters

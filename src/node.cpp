@@ -15,13 +15,13 @@ _type(type), _object(object), _data(nullptr) {
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Node::~Node() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
 }
 

@@ -19,13 +19,13 @@ _root(root), _data(nullptr) {
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Cursor::~Cursor() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
 
 	wlr_cursor_destroy(_wlr_cursor);
@@ -57,6 +57,7 @@ Cursor & Cursor::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));
 	}
+    return *this;
 }
 
 void Cursor::_handle_destroy(struct wl_listener * listener, void * data) {

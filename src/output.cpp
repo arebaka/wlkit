@@ -50,13 +50,13 @@ _server(server), _wlr_output(wlr_output), _current_workspace(nullptr), _data(nul
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Output::~Output() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
 
 	delete _workspaces_history;

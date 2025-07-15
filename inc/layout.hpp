@@ -6,7 +6,7 @@ namespace wlkit {
 
 class Layout {
 public:
-	using Handler = std::function<void(Layout&)>;
+	using Handler = std::function<void(Layout*)>;
 
 private:
 	char * _name;

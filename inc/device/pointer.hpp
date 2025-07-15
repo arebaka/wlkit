@@ -53,6 +53,8 @@ public:
 	Pointer & on_button(const ButtonHandler & handler);
 	Pointer & on_axis(const AxisHandler & handler);
 
+	[[nodiscard]] struct ::wlr_pointer * wlr_pointer() const;
+
 private:
 	static void _handle_motion(struct wl_listener * listener, void * data);
 	static void _handle_button(struct wl_listener * listener, void * data);

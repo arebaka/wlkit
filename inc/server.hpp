@@ -36,7 +36,7 @@ namespace wlkit {
 
 class Server {
 public:
-	using Handler = std::function<void(Server&)>;
+	using Handler = std::function<void(Server*)>;
 	using NewOutputHandler = std::function<void(Output * output, wlr_output * wlr_output, Server * server)>;
 	using NewInputHandler = std::function<void(Input * input, wlr_input_device * device, Server * server)>;
 
@@ -52,8 +52,9 @@ private:
 	struct ::wlr_compositor * _compositor;
 
 	Root * _root;
-	bool _running;
 	const char * _socket_id;
+    bool _inside_wl;
+	bool _running;
 	std::list<Output*> _outputs;
 	std::list<Input*> _inputs;
 	std::list<Workspace*> _workspaces;
@@ -65,11 +66,11 @@ private:
 
 	struct ::wlr_xdg_shell * _xdg_shell;
 	// struct wlr_foreign_toplevel_manager_v1 * _foreign_toplevel_manager_v1;
-	// struct wlr_data_device_manager * _data_device_manager;
+	struct wlr_data_device_manager * _data_device_manager;
 	// struct wlr_idle_notifier_v1 * _idle_notifier_v1;
-	// struct wlr_linux_dmabuf_v1 * _linux_dmabuf_v1;
+	struct wlr_linux_dmabuf_v1 * _linux_dmabuf_v1;
 	// struct wlr_xdg_activation_v1 * _xdg_activation_v1;
-	// // struct wlr_pointer_constraints_v1 * pointer_constraints_v1;
+	struct wlr_pointer_constraints_v1 * pointer_constraints_v1;
 
 	// // struct wlr_content_type_manager_v1 * content_type_manager_v1;
 	// struct wlr_data_control_manager_v1 * _wlr_data_control_manager_v1;
@@ -123,6 +124,7 @@ public:
 	// Workspace * get_workspace_by_id(Workspace::ID id);
 
 	Server & add_workspace(Workspace * workspace);
+	Server & add_window(Window * window);
 
 	[[nodiscard]] wl_display * display() const;
 	[[nodiscard]] wl_event_loop * event_loop() const;
@@ -135,6 +137,7 @@ public:
 
 	[[nodiscard]] Root * root() const;
 	[[nodiscard]] const char * socket_id() const;
+	[[nodiscard]] bool inside_wl() const;
 	[[nodiscard]] bool running() const;
 	[[nodiscard]] void * data() const;
 

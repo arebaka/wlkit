@@ -1,11 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 
-#include <wlkit/server.hpp>
-#include <wlkit/output.hpp>
-#include <wlkit/render.hpp>
-#include <wlkit/device/keyboard.hpp>
-#include <wlkit/device/pointer.hpp>
+#include <wlkit/wlkit.hpp>
 
 extern "C" {
 #include <wlr/types/wlr_seat.h>
@@ -24,19 +20,14 @@ extern "C" {
 static wlkit::Geo cursor_x = 0, cursor_y = 0;
 static bool cursor_state = 0;
 
-void setup_portal_env(const wlkit::Server & server) {
+void setup_portal_env(const wlkit::Server * server) {
 	(void)server;  // unused for now
 	setenv("XDG_CURRENT_DESKTOP", "wlkit", 1);
 	setenv("XDG_SESSION_TYPE", "wayland", 1);
 	setenv("XDG_SESSION_DESKTOP", "wlkit", 1);
 }
 
-// void create_default_workspace(struct wlkit::Server & server) {
-// 	server.set_current_workspace = new wlkit::Workspace(server, &wlkit_layout_floating, 1, "default");
-// }
-
-void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render
-) {
+void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
 	struct wlr_render_pass * pass = render->pass();
 
 	// 5. Добавим заливку (фон)
@@ -230,6 +221,57 @@ void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, 
 	}
 }
 
+void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
+	// Получаем render_pass
+	struct wlr_render_pass *pass = render->pass();
+
+	// ––––––––––––––––––––––––––––––––––––––––––
+	// 2) Панель воркспейсов
+	// ––––––––––––––––––––––––––––––––––––––––––
+	auto server = output->server();
+	auto workspaces = server->workspaces();
+	size_t ws_count = workspaces.size();
+	const int tab_h = 30;
+	int tab_w = output->width() / (ws_count ? ws_count : 1);
+
+	size_t idx = 0;
+	for (auto ws : workspaces) {
+		bool current = ws == output->current_workspace();
+		struct wlr_render_rect_options ws_opts = {
+			.box = {
+				.x = int(idx * tab_w) + 2,
+				.y = 2,
+				.width  = tab_w - 4,
+				.height = tab_h - 4,
+			},
+			.color = { current ? 0.2f : 0.3f, current ? 0.6f : 0.3f, current ? 0.9f : 0.3f, 1.0f }
+		};
+		wlr_render_pass_add_rect(pass, &ws_opts);
+		idx++;
+	}
+
+	// ––––––––––––––––––––––––––––––––––––––––––
+	// 3) Окна на текущем воркспейсе
+	// ––––––––––––––––––––––––––––––––––––––––––
+	for (auto win : server->windows()) {
+		if (win->workspace() != output->current_workspace()) {
+			continue;
+		}
+		// получаем геометрию окна
+		int x = win->x();
+		int y = win->y() + tab_h;        // сдвиг вниз под панель
+		int w = win->width();
+		int h = win->height();
+
+		bool mapped = win->mapped();
+		struct wlr_render_rect_options w_opts = {
+			.box = { .x = x, .y = y, .width = w, .height = h },
+			.color = { mapped ? 0.8f : 0.5f, mapped ? 0.8f : 0.5f, mapped ? 0.2f : 0.5f, mapped ? 0.8f : 0.5f }
+		};
+		// wlr_render_pass_add_rect(pass, &w_opts);
+	}
+}
+
 void draw_cursor(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
 	struct wlr_render_pass * pass = render->pass();
 
@@ -302,12 +344,6 @@ void setup_keyboard(wlkit::Keyboard * keyboard) {
 			auto server = keyboard->server();
 			auto sym = xkb_state_key_get_one_sym(keyboard->wlr_keyboard()->xkb_state, keycode + 8);
 			if (sym == XKB_KEY_Escape) {
-				std::cout
-					<< "outputs: " << server->outputs().size() << std::endl
-					<< "inputs: " << server->inputs().size() << std::endl
-					<< "workspaces: " << server->workspaces().size() << std::endl
-					<< "windows: " << server->windows().size() << std::endl
-					<< "Escape!" << std::endl;
 				server->stop();
 			}
 		});
@@ -350,19 +386,34 @@ void setup_input(wlkit::Input * input, struct wlr_input_device * device, wlkit::
 }
 
 int main() {
-	struct wl_display * display = wl_display_create();
-	struct wlr_seat * seat = wlr_seat_create(display, "seat0");
+	auto display = wl_display_create();
+	auto seat = wlr_seat_create(display, "seat0");
 
-	auto server = new wlkit::Server(display, seat, setup_portal_env);
-	server->
-		on_new_output([](auto output, auto wlr_output, auto server) {
+	setenv("WLR_BACKENDS", "drm", /*overwrite=*/1);
+	auto server = wlkit::Server(display, seat, setup_portal_env);
+
+	server
+		.on_start([](auto server) {
+			auto layout = new wlkit::Layout("tiling", nullptr);
+			auto workspace = new wlkit::Workspace(server, layout, 1, "default", nullptr);
+			auto window1 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 1", "app name", nullptr);
+			auto window2 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 2", "app name", nullptr);
+		})
+		.on_stop([](auto server) {
+			std::cout
+				<< "outputs: " << server->outputs().size() << std::endl
+				<< "inputs: " << server->inputs().size() << std::endl
+				<< "workspaces: " << server->workspaces().size() << std::endl
+				<< "windows: " << server->windows().size() << std::endl
+				<< "Escape!" << std::endl;
+		})
+		.on_new_output([](auto output, auto wlr_output, auto server) {
 			// output->on_frame(dummy_draw_frame);
 			output->on_frame(ai_test_draw_frame);
+			output->on_frame(ai_test_draw_status);
 			output->on_frame(draw_cursor);
 		})
 		.on_new_output(setup_output)
 		.on_new_input(setup_input)
 		.start();
-
-	server->stop();
 }

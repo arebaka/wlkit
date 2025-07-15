@@ -17,7 +17,21 @@ _display(display), _seat(seat), _running(false), _data(nullptr) {
 		// TODO error
 	}
 
+	_inside_wl = getenv("WAYLAND_DISPLAY") ||
+		(getenv("XDG_SESSION_TYPE") && strcmp(getenv("XDG_SESSION_TYPE"), "wayland") == 0);
+	if (_inside_wl) {
+		setenv("WLR_BACKENDS", "wayland", 1);
+	} else {
+		setenv("WLR_BACKENDS", "drm,libinput", 1);
+		setenv("LIBSEAT_BACKEND", "logind", 1);
+	}
+
 	_event_loop = wl_display_get_event_loop(_display);
+
+	_session = wlr_session_create(_event_loop);
+	if (!_session) {
+		// TODO error
+	}
 
 	_backend = wlr_backend_autocreate(_event_loop, &_session);
 	if (!_backend) {
@@ -52,16 +66,15 @@ _display(display), _seat(seat), _running(false), _data(nullptr) {
 	wl_signal_add(&_xdg_shell->events.new_toplevel, &_new_xdg_shell_toplevel_listener);
 
 	// _foreign_toplevel_manager_v1 = wlr_foreign_toplevel_manager_v1_create(_display);
-
-	// _data_device_manager = wlr_data_device_manager_create(_display);
+	_data_device_manager = wlr_data_device_manager_create(_display);
 	// _idle_notifier_v1 = wlr_idle_notifier_v1_create(_display);
 
-	// if (wlr_renderer_get_texture_formats(_renderer, WLR_BUFFER_CAP_DMABUF) != nullptr) {
-	// 	_linux_dmabuf_v1 = wlr_linux_dmabuf_v1_create_with_renderer(_display, 4, _renderer);
-	// }
+	if (wlr_renderer_get_texture_formats(_renderer, WLR_BUFFER_CAP_DMABUF) != nullptr) {
+		_linux_dmabuf_v1 = wlr_linux_dmabuf_v1_create_with_renderer(_display, 4, _renderer);
+	}
 	// if (wlr_renderer_get_drm_fd(_renderer) >= 0 &&
 	// 	_renderer->features.timeline &&
-	// 	_backend->features.timeline
+	//     _backend->features.timeline
 	// ) {
 	// 	wlr_linux_drm_syncobj_manager_v1_create(_display, 1, wlr_renderer_get_drm_fd(_renderer));
 	// }
@@ -109,19 +122,14 @@ _display(display), _seat(seat), _running(false), _data(nullptr) {
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Server::~Server() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
-
-	wlr_allocator_destroy(_allocator);
-	wlr_renderer_destroy(_renderer);
-	wlr_backend_destroy(_backend);
-	wl_event_loop_destroy(_event_loop);
 }
 
 Server & Server::start() {
@@ -138,7 +146,7 @@ Server & Server::start() {
 	wlr_log(WLR_INFO, "Running wlkit on WAYLAND_DISPLAY=%s", _socket_id);
 
 	for (auto & cb : _on_start) {
-		cb(*this);
+		cb(this);
 	}
 
 	_running = true;
@@ -149,7 +157,7 @@ Server & Server::start() {
 
 Server & Server::stop() {
 	for (auto & cb : _on_stop) {
-		cb(*this);
+		cb(this);
 	}
 
 	_running = false;
@@ -198,6 +206,10 @@ const char * Server::socket_id() const {
 	return _socket_id;
 }
 
+bool Server::inside_wl() const {
+	return _inside_wl;
+}
+
 bool Server::running() const {
 	return _running;
 }
@@ -237,6 +249,12 @@ Server & Server::set_data(void * data) {
 
 Server & Server::add_workspace(Workspace * workspace) {
 	_workspaces.push_back(workspace);
+	return *this;
+}
+
+Server & Server::add_window(Window * window) {
+	_windows.push_back(window);
+	return *this;
 }
 
 Server & Server::on_destroy(const Handler & handler) {
@@ -277,7 +295,6 @@ Server & Server::on_new_input(const NewInputHandler & handler) {
 void Server::_handle_destroy(struct wl_listener * listener, void * data) {
 	Server * it = wl_container_of(listener, it, _destroy_listener);
 	delete it;
-
 }
 
 void Server::_handle_new_output(struct wl_listener * listener, void * data) {

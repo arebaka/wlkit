@@ -6,7 +6,7 @@ Pointer::Pointer(Server * server, struct ::wlr_input_device * device, const Hand
 Input(server, Type::POINTER, device, callback) {
 	_ptr = wlr_pointer_from_input_device(_device);
 	if (!_ptr) {
-		// TODO error;
+		// TODO error
 	}
 
 	_motion_listener.notify = _handle_motion;
@@ -25,6 +25,10 @@ bool Pointer::is_pointer() const {
 
 Pointer * Pointer::as_pointer() {
 	return this;
+}
+
+struct ::wlr_pointer * Pointer::wlr_pointer() const {
+	return _ptr;
 }
 
 Pointer & Pointer::on_motion(const MotionHandler & handler) {

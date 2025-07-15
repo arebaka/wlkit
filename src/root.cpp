@@ -53,13 +53,13 @@ _server(server), _x(0), _y(0), _width(0), _height(0), _data(nullptr) {
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Root::~Root() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
 
 	delete _cursor;
@@ -104,6 +104,7 @@ Root & Root::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));
 	}
+    return *this;
 }
 
 void Root::_handle_destroy(struct wl_listener * listener, void * data) {

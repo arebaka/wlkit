@@ -6,7 +6,7 @@ namespace wlkit {
 
 class Node {
 public:
-	using Handler = std::function<void(Node&)>;
+	using Handler = std::function<void(Node*)>;
 	using ID = uint32_t;
 
 	typedef enum Type {

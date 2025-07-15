@@ -10,7 +10,7 @@ namespace wlkit {
 
 class Input {
 public:
-	using Handler = std::function<void(Input&)>;
+	using Handler = std::function<void(Input*)>;
 
 	enum class Type {
 		KEYBOARD,

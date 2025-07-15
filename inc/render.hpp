@@ -11,7 +11,7 @@ namespace wlkit {
 
 class Render {
 public:
-	using Handler = std::function<void(Render&)>;
+	using Handler = std::function<void(Render*)>;
 
 private:
 	Output * _output;
@@ -37,7 +37,6 @@ public:
 
 	[[nodiscard]] Output * output() const;
 	[[nodiscard]] struct wlr_output_state * state() const;
-	[[nodiscard]] struct wlr_renderer * renderer() const;
 	[[nodiscard]] struct wlr_render_pass * pass() const;
 
 	// TODO setters

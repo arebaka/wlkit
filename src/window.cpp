@@ -9,35 +9,37 @@ Window::Window(Server * server, Workspace * workspace,
 	const char * title, const char * app_id, const Handler & callback):
 _server(server), _workspace(workspace),
 _xdg_surface(xdg_surface), _xwayland_surface(xwayland_surface),
-_data(nullptr) {
+_mapped(false), _data(nullptr) {
 	_title = strdup(title ? title : "");
 	_app_id = strdup(app_id ? app_id : "");
 	_workspaces_history = new WorkspacesHistory();
-	_mapped = false;
-	_surface = _xdg_surface->surface;
+
+	_server->add_window(this);
+
+	_destroy_listener.notify = _handle_destroy;
+	if (_xdg_surface) {
+		wl_signal_add(&_xdg_surface->events.destroy, &_destroy_listener);
+		wl_signal_add(&_xdg_surface->surface->events.destroy, &_destroy_listener);
+	}
 
 	// _foreign_toplevel = wlr_foreign_toplevel_handle_v1_create(_server->foreign_toplevel_manager_v1());
 	// wlr_foreign_toplevel_handle_v1_set_title(_foreign_toplevel, _title);
 	// wlr_foreign_toplevel_handle_v1_set_app_id(_foreign_toplevel, _app_id);
+	// wl_signal_add(&_foreign_toplevel->events.destroy, &_destroy_listener);
 
 	// _request_close_listener.notify = _handle_request_close;
 	// wl_signal_add(&_foreign_toplevel->events.request_close, &_request_close_listener);
 	// TODO handlers
 
-	_destroy_listener.notify = _handle_destroy;
-	wl_signal_add(&_xdg_surface->events.destroy, &_destroy_listener);
-	wl_signal_add(&_surface->events.destroy, &_destroy_listener);
-	// wl_signal_add(&_foreign_toplevel->events.destroy, &_destroy_listener);
-
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Window::~Window() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
 
 	delete _workspaces_history;
@@ -53,6 +55,8 @@ Window & Window::move(Geo x, Geo y) {
 	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
 		// wlr_xdg_toplevel_set_size(_xdg_surface->toplevel, _width, _height);
 	}
+
+	return *this;
 }
 
 Window & Window::resize(Geo width, Geo height) {
@@ -62,12 +66,16 @@ Window & Window::resize(Geo width, Geo height) {
 	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
 		// wlr_xdg_toplevel_set_size(_xdg_surface->toplevel, _width, _height);
 	}
+
+	return *this;
 }
 
 Window & Window::close() {
 	if (_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
 		// wlr_xdg_toplevel_send_close(_xdg_surface->toplevel);
 	}
+
+	return *this;
 }
 
 Window & Window::maximize() {
@@ -79,6 +87,8 @@ Window & Window::maximize() {
 	// if (_foreign_toplevel) {
 		// wlr_foreign_toplevel_handle_v1_set_maximized(_foreign_toplevel, _maximized);
 	// }
+
+	return *this;
 }
 
 Window & Window::minimize() {
@@ -87,6 +97,8 @@ Window & Window::minimize() {
 	// if (_foreign_toplevel) {
 		// wlr_foreign_toplevel_handle_v1_set_minimized(_foreign_toplevel, _minimized);
 	// }
+
+	return *this;
 }
 
 Window & Window::fullscreen() {
@@ -98,18 +110,20 @@ Window & Window::fullscreen() {
 	// if (_foreign_toplevel) {
 		// wlr_foreign_toplevel_handle_v1_set_fullscreen(_foreign_toplevel, _fullscreen);
 	// }
+
+	return *this;
 }
 
 Server * Window::server() const {
-
+	return _server;
 }
 
 Workspace * Window::workspace() const {
-
+	return _workspace;
 }
 
-WorkspacesHistory * Window::workspace_history() const {
-
+WorkspacesHistory * Window::workspaces_history() const {
+	return _workspaces_history;
 }
 
 const char * Window::title() const {
@@ -164,14 +178,11 @@ struct wlr_xwayland_surface * Window::xwayland_surface() const {
 	return _xwayland_surface;
 }
 
-struct wlr_surface * Window::surface() const {
-	return _surface;
-}
-
 Window & Window::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));
 	}
+	return *this;
 }
 
 void Window::_handle_destroy(struct wl_listener * listener, void * data) {

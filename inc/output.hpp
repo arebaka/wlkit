@@ -12,7 +12,7 @@ namespace wlkit {
 
 class Output {
 public:
-	using Handler = std::function<void(Output&)>;
+	using Handler = std::function<void(Output*)>;
 	using FrameHandler = std::function<void(Output * output, struct wlr_output * wlr_output, Render * render)>;
 
 	using Scale = float;

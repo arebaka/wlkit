@@ -8,13 +8,13 @@ _server(server), _type(type), _device(device), _data(nullptr) {
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
-		callback(*this);
+		callback(this);
 	}
 }
 
 Input::~Input() {
 	for (auto & cb : _on_destroy) {
-		cb(*this);
+		cb(this);
 	}
 }
 
