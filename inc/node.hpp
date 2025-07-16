@@ -32,7 +32,7 @@ private:
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
 
-	struct wl_listener _destroy_listener;
+	struct ::wl_listener _destroy_listener;
 
 public:
 	Node(
@@ -52,8 +52,10 @@ public:
 
 	Root & on_destroy(const Handler & handler);
 
+	static struct ::wlr_scene_tree * alloc_scene_tree(struct ::wlr_scene_tree * parent, bool * failed);
+
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };
 
 }

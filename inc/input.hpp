@@ -31,7 +31,7 @@ protected:
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
 
-	struct wl_listener _destroy_listener;
+	struct ::wl_listener _destroy_listener;
 
 public:
 	Input(
@@ -48,7 +48,7 @@ public:
 
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] Type type() const;
-	[[nodiscard]] struct wlr_input_device * device() const;
+	[[nodiscard]] struct ::wlr_input_device * device() const;
 	[[nodiscard]] void * data() const;
 
 	Input & set_data(void * data);
@@ -56,7 +56,7 @@ public:
 	Input & on_destroy(const Handler & handler);
 
 protected:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };
 
 }

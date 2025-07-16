@@ -1,6 +1,7 @@
 #include "server.hpp"
 #include "output.hpp"
 #include "root.hpp"
+#include "window.hpp"
 
 #include "device/keyboard.hpp"
 #include "device/pointer.hpp"
@@ -13,9 +14,9 @@ extern "C" {
 
 using namespace wlkit;
 
-Server::Server(struct wl_display * display, struct wlr_seat * seat, const Handler & callback):
-_display(display), _seat(seat), _running(false), _data(nullptr) {
-	if (!_display || !_seat) {
+Server::Server(Seat * seat, const Handler & callback):
+_seat(seat), _running(false), _data(nullptr) {
+	if (!_seat) {
 		// TODO error
 	}
 
@@ -26,6 +27,11 @@ _display(display), _seat(seat), _running(false), _data(nullptr) {
 	} else {
 		setenv("WLR_BACKENDS", "drm,libinput", 1);
 		setenv("LIBSEAT_BACKEND", "logind", 1);
+	}
+
+	_display = wl_display_create();
+	if (!_display) {
+		// TODO error
 	}
 
 	_event_loop = wl_display_get_event_loop(_display);
@@ -76,7 +82,7 @@ _display(display), _seat(seat), _running(false), _data(nullptr) {
 	}
 	// if (wlr_renderer_get_drm_fd(_renderer) >= 0 &&
 	// 	_renderer->features.timeline &&
-	//     _backend->features.timeline
+	//    _backend->features.timeline
 	// ) {
 	// 	wlr_linux_drm_syncobj_manager_v1_create(_display, 1, wlr_renderer_get_drm_fd(_renderer));
 	// }
@@ -119,8 +125,8 @@ _display(display), _seat(seat), _running(false), _data(nullptr) {
 	wl_signal_add(&_backend->events.new_output, &_new_output_listener);
 	_new_input_listener.notify = _handle_new_input;
 	wl_signal_add(&_backend->events.new_input, &_new_input_listener);
-	_new_xdg_surface_listener.notify = _handle_new_xdg_surface;
-	wl_signal_add(&_xdg_shell->events.new_surface, &_new_xdg_surface_listener);
+	// _new_xdg_surface_listener.notify = _handle_new_xdg_surface;
+	// wl_signal_add(&_xdg_shell->events.new_surface, &_new_xdg_surface_listener);
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
@@ -132,6 +138,13 @@ Server::~Server() {
 	for (auto & cb : _on_destroy) {
 		cb(this);
 	}
+}
+
+Workspace * Server::get_workspace_by_id(Workspace::ID id) {
+	auto workspace = std::find_if(_workspaces.begin(), _workspaces.end(), [=](auto ws) {
+		return ws->id() == id;
+	});
+	return workspace == _workspaces.end() ? nullptr : *workspace;
 }
 
 Server & Server::start() {
@@ -168,13 +181,6 @@ Server & Server::stop() {
 	return *this;
 }
 
-Workspace * Server::get_workspace_by_id(Workspace::ID id) {
-	auto workspace = std::find_if(_workspaces.begin(), _workspaces.end(), [=](auto ws) {
-		return ws->id() == id;
-	});
-	return workspace == _workspaces.end() ? nullptr : *workspace;
-}
-
 Server & Server::add_workspace(Workspace * workspace) {
 	_workspaces.push_back(workspace);
 	return *this;
@@ -195,36 +201,41 @@ Server & Server::remove_window(Window * window) {
 	return *this;
 }
 
-wl_display * Server::display() const {
+Server & Server::prefer_output(Output * output) {
+	_preferred_output = output;
+	return *this;
+}
+
+struct wl_display * Server::display() const {
 	return _display;
 }
 
-wl_event_loop * Server::event_loop() const {
+struct wl_event_loop * Server::event_loop() const {
 	return _event_loop;
 }
 
-wlr_seat * Server::seat() const {
-	return _seat;
-}
-
-wlr_backend * Server::backend() const {
+struct wlr_backend * Server::backend() const {
 	return _backend;
 }
 
-wlr_session * Server::session() const {
+struct wlr_session * Server::session() const {
 	return _session;
 }
 
-wlr_renderer * Server::renderer() const {
+struct wlr_renderer * Server::renderer() const {
 	return _renderer;
 }
 
-wlr_allocator * Server::allocator() const {
+struct wlr_allocator * Server::allocator() const {
 	return _allocator;
 }
 
-wlr_compositor * Server::compositor() const {
+struct wlr_compositor * Server::compositor() const {
 	return _compositor;
+}
+
+Seat * Server::seat() const {
+	return _seat;
 }
 
 Root * Server::root() const {
@@ -241,6 +252,10 @@ bool Server::inside_wl() const {
 
 bool Server::running() const {
 	return _running;
+}
+
+Output * Server::preferred_output() const {
+	return _preferred_output;
 }
 
 void * Server::data() const {
@@ -267,7 +282,7 @@ WindowsHistory * Server::windows_history() const {
 	return _windows_history;
 }
 
-wlr_xdg_shell * Server::xdg_shell() const {
+struct wlr_xdg_shell * Server::xdg_shell() const {
 	return _xdg_shell;
 }
 
@@ -311,6 +326,13 @@ Server & Server::on_new_input(const NewInputHandler & handler) {
 	return *this;
 }
 
+Server & Server::on_new_xdg_shell_toplevel(const NewXDGShellToplevelHandler & handler) {
+	if (handler) {
+		_on_new_xdg_shell_toplevel.push_back(std::move(handler));
+	}
+	return *this;
+}
+
 void Server::_handle_destroy(struct wl_listener * listener, void * data) {
 	Server * it = wl_container_of(listener, it, _destroy_listener);
 	delete it;
@@ -332,7 +354,7 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 	struct Server * server = wl_container_of(listener, server, _new_input_listener);
 	auto device = static_cast<struct wlr_input_device*>(data);
 
-	wlr_seat_set_capabilities(server->seat(),
+	wlr_seat_set_capabilities(server->seat()->wlr_seat(),
 		WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_TOUCH);
 
 	Input * input;
@@ -363,39 +385,25 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 	}
 }
 
-void Server::_handle_new_xdg_surface(struct wl_listener * listener, void * data) {
+void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void * data) {
 	Server * server = wl_container_of(listener, server, _new_xdg_surface_listener);
-	auto xdg_surface = static_cast<struct wlr_xdg_surface *>(data);
+	auto xdg_toplevel = static_cast<struct wlr_xdg_toplevel*>(data);
+	auto xdg_surface = xdg_toplevel->base;
+	auto output = server->preferred_output();
+	auto workspace = output->current_workspace();
 
-	if (xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-		return;
+	wlr_xdg_surface_ping(xdg_surface);
+
+	auto window = std::make_unique<Window>(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
+	for (auto & cb : server->_on_new_xdg_shell_toplevel) {
+		cb(window.get(), xdg_surface, output);
 	}
-
-	// struct wlkit_window * window = malloc(sizeof(*window));
-	// if (!window) {
-	// 	wlr_log(WLR_ERROR, "Unable to allocate wlkit window");
-	// 	return;
-	// }
-
-	// window->server = server;
-	// window->xdg_surface = xdg_surface;
-	// window->surface = xdg_surface->surface;
-	// window->workspace = server->current_workspace;
-
-	// wl_list_insert(&server->current_workspace->windows, &window->link);
-	// wl_list_insert(&server->windows, &window->link);
-
-	// window->listeners.map.notify = NULL;
-	// window->listeners.unmap.notify = NULL;
-	// window->listeners.destroy.notify = NULL;
 
 	// if (server->portal_manager) {
 	// 	window->foreign_toplevel = wlr_foreign_toplevel_handle_v1_create(
 	// 		server->portal_manager->foreign_toplevel_manager_v1);
 	// }
 }
-
-void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void * data) {}
 
 void Server::_handle_xdg_activation_v1_destroy(struct wl_listener * listener, void * data) {};
 void Server::_handle_xdg_activation_v1_request_activate(struct wl_listener * listener, void * data) {};

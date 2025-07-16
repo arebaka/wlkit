@@ -28,7 +28,7 @@ private:
 	// std::list<Handler> _on_window_removed;
 	// std::list<Handler> _on_layout_change;
 
-	wl_listener _destroy_listener;
+	struct ::wl_listener _destroy_listener;
 
 public:
 	Workspace(
@@ -57,10 +57,14 @@ public:
 	Workspace & on_destroy(const Handler & handler);
 
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };
 
 class WorkspacesHistory {
+public:
+	using Iterator = std::list<Workspace*>::iterator;
+	using ConstIterator = std::list<Workspace*>::const_iterator;
+
 private:
 	std::list<Workspace*> _order;
 	std::unordered_map<Workspace*, std::list<Workspace*>::iterator> _pos;
@@ -70,10 +74,19 @@ public:
 	~WorkspacesHistory();
 
 	const std::list<Workspace*> & history() const;
+
 	WorkspacesHistory & shift(Workspace * workspace);
 	WorkspacesHistory & remove(Workspace * workspace);
+
 	Workspace * top() const;
 	Workspace * previous() const;
+
+	Iterator begin();
+	Iterator end();
+	ConstIterator begin() const;
+	ConstIterator end() const;
+	ConstIterator cbegin() const;
+	ConstIterator cend() const;
 };
 
 }

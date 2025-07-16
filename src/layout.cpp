@@ -39,7 +39,7 @@ Layout & Layout::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));
 	}
-    return *this;
+	return *this;
 }
 
 void Layout::_handle_destroy(struct wl_listener * listener, void * data) {

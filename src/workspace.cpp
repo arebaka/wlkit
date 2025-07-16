@@ -31,6 +31,9 @@ Workspace::~Workspace() {
 
 Workspace & Workspace::add_window(Window * window) {
 	_windows.push_back(window);
+	_windows_history->shift(window);
+	focus_window(window);
+
 	return *this;
 }
 

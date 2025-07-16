@@ -1,5 +1,8 @@
 #include <iostream>
 #include <cstdlib>
+#include <chrono>
+#include <vector>
+#include <unistd.h>
 
 #include <wlkit/wlkit.hpp>
 
@@ -16,12 +19,220 @@ extern "C" {
 #include <xkbcommon/xkbcommon.h>
 }
 
+const char * RESET   = "\033[0m";
+const char * BOLD    = "\033[1m";
+const char * GREEN   = "\033[32m";
+const char * YELLOW  = "\033[33m";
+const char * BLUE    = "\033[34m";
+const char * MAGENTA = "\033[35m";
+const char * CYAN    = "\033[36m";
+const char * RED     = "\033[31m";
+
 static wlkit::Geo cursor_x = 0, cursor_y = 0;
 static bool cursor_state = 0;
 static wlkit::Window * moving_window = nullptr;
 
+std::string get_current_time() {
+	auto now = std::chrono::system_clock::now();
+	auto time_t = std::chrono::system_clock::to_time_t(now);
+	std::stringstream ss;
+	ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
+	return ss.str();
+}
+
+void print_separator() {
+	std::cout << std::string(60, '=') << std::endl;
+}
+
+void print_workspace_info(wlkit::Server * server) {
+	std::cout << BOLD << BLUE << "🏢 WORKSPACES INFO" << RESET << std::endl;
+	print_separator();
+
+	int workspace_count = 0;
+	for (auto* ws : server->workspaces()) {
+		workspace_count++;
+
+		std::cout << CYAN << "Workspace #" << ws->id() << RESET;
+		if (ws->name() && strlen(ws->name()) > 0) {
+			std::cout << " (" << YELLOW << ws->name() << RESET << ")";
+		}
+		std::cout << std::endl;
+
+		// Показываем активный воркспейс
+		bool is_current = false;
+		for (auto* output : server->outputs()) {
+			if (output->current_workspace() == ws) {
+				is_current = true;
+				break;
+			}
+		}
+
+		if (is_current) {
+			std::cout << "  " << GREEN << "✓ ACTIVE" << RESET << std::endl;
+		}
+
+		// Подсчитываем окна в воркспейсе
+		int window_count = 0;
+		for (auto* win : server->windows()) {
+			if (win->workspace() == ws) {
+				window_count++;
+			}
+		}
+
+		std::cout << "  Windows: " << window_count << std::endl;
+
+		if (ws->layout()) {
+			std::cout << "  Layout: " << ws->layout()->name() << std::endl;
+		}
+
+		if (ws->focused_window() && ws->focused_window()->is_ready()) {
+			std::cout << "  Focused: " << MAGENTA << ws->focused_window()->title() << RESET << std::endl;
+		}
+
+		std::cout << std::endl;
+	}
+
+	std::cout << BOLD << "Total workspaces: " << workspace_count << RESET << std::endl;
+	std::cout << std::endl;
+}
+
+void print_window_info(wlkit::Server * server) {
+	std::cout << BOLD << BLUE << "🪟 WINDOWS INFO" << RESET << std::endl;
+	print_separator();
+
+	int window_count = 0;
+	for (auto* win : server->windows()) {
+		window_count++;
+
+		std::cout << CYAN << "Window #" << window_count << RESET;
+		if (win->title() && strlen(win->title()) > 0) {
+			std::cout << " - " << YELLOW << win->title() << RESET;
+		}
+		std::cout << std::endl;
+
+		// Информация о приложении
+		if (win->app_id() && strlen(win->app_id()) > 0) {
+			std::cout << "  App ID: " << win->app_id() << std::endl;
+		}
+
+		// Позиция и размеры
+		std::cout << "  Position: (" << win->x() << ", " << win->y() << ")" << std::endl;
+		std::cout << "  Size: " << win->width() << "x" << win->height() << std::endl;
+
+		// Воркспейс
+		if (win->workspace()) {
+			std::cout << "  Workspace: #" << win->workspace()->id();
+			if (win->workspace()->name() && strlen(win->workspace()->name()) > 0) {
+				std::cout << " (" << win->workspace()->name() << ")";
+			}
+			std::cout << std::endl;
+		}
+
+		// Статус окна
+		std::cout << "  Status: ";
+		if (win->mapped()) {
+			std::cout << GREEN << "Mapped" << RESET;
+		} else {
+			std::cout << RED << "Unmapped" << RESET;
+		}
+
+		// Проверяем, является ли окно сфокусированным
+		bool is_focused = false;
+		for (auto* ws : server->workspaces()) {
+			if (ws->focused_window() == win) {
+				is_focused = true;
+				break;
+			}
+		}
+
+		if (is_focused) {
+			std::cout << " | " << MAGENTA << "Focused" << RESET;
+		}
+
+		std::cout << std::endl;
+		std::cout << std::endl;
+	}
+
+	std::cout << BOLD << "Total windows: " << window_count << RESET << std::endl;
+	std::cout << std::endl;
+}
+
+void print_output_info(wlkit::Server * server) {
+	std::cout << BOLD << BLUE << "🖥️ OUTPUTS INFO" << RESET << std::endl;
+	print_separator();
+
+	int output_count = 0;
+	for (auto* output : server->outputs()) {
+		output_count++;
+
+		std::cout << CYAN << "Output #" << output_count << RESET << std::endl;
+		std::cout << "  Resolution: " << output->width() << "x" << output->height() << std::endl;
+
+		if (output->current_workspace()) {
+			std::cout << "  Current workspace: #" << output->current_workspace()->id();
+			if (output->current_workspace()->name() && strlen(output->current_workspace()->name()) > 0) {
+				std::cout << " (" << output->current_workspace()->name() << ")";
+			}
+			std::cout << std::endl;
+		}
+
+		// Показываем воркспейсы доступные на этом выходе
+		std::cout << "  Available workspaces: ";
+		bool first = true;
+		for (auto* ws : output->workspaces()) {
+			if (!first) std::cout << ", ";
+			std::cout << "#" << ws->id();
+			if (ws->name() && strlen(ws->name()) > 0) {
+				std::cout << "(" << ws->name() << ")";
+			}
+			first = false;
+		}
+		std::cout << std::endl;
+		std::cout << std::endl;
+	}
+
+	std::cout << BOLD << "Total outputs: " << output_count << RESET << std::endl;
+	std::cout << std::endl;
+}
+
+void print_input_info(wlkit::Server * server) {
+	std::cout << BOLD << BLUE << "⌨️ INPUT DEVICES INFO" << RESET << std::endl;
+	print_separator();
+
+	int input_count = 0;
+	for (auto* input : server->inputs()) {
+		input_count++;
+
+		std::cout << CYAN << "Input #" << input_count << RESET << " - ";
+
+		if (input->is_keyboard()) {
+			std::cout << "Keyboard" << std::endl;
+		} else if (input->is_pointer()) {
+			std::cout << "Pointer" << std::endl;
+		} else {
+			std::cout << "Other" << std::endl;
+		}
+	}
+
+	std::cout << BOLD << "Total input devices: " << input_count << RESET << std::endl;
+	std::cout << std::endl;
+}
+
+void print_full_status(wlkit::Server * server) {
+	std::cout << BOLD << GREEN << "🔧 WLKIT COMPOSITOR STATUS" << RESET << std::endl;
+	std::cout << "Time: " << get_current_time() << std::endl;
+	std::cout << std::endl;
+
+	print_output_info(server);
+	print_workspace_info(server);
+	print_window_info(server);
+	print_input_info(server);
+
+	print_separator();
+	std::cout << BOLD << "Status update complete!" << RESET << std::endl;
+}
+
 void setup_portal_env(const wlkit::Server * server) {
-	(void)server;  // unused for now
 	setenv("XDG_CURRENT_DESKTOP", "wlkit", 1);
 	setenv("XDG_SESSION_TYPE", "wayland", 1);
 	setenv("XDG_SESSION_DESKTOP", "wlkit", 1);
@@ -253,7 +464,10 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 	// ––––––––––––––––––––––––––––––––––––––––––
 	// 3) Окна на текущем воркспейсе
 	// ––––––––––––––––––––––––––––––––––––––––––
-	for (auto win : server->windows()) {
+	for (auto win : output->current_workspace()->windows()) {
+		if (!win->is_ready()) {
+			// continue;
+		}
 		// получаем геометрию окна
 		int x = win->x();
 		int y = win->y() + tab_h;  // сдвиг вниз под панель
@@ -323,14 +537,21 @@ void setup_keyboard(wlkit::Keyboard * keyboard) {
 				<< " group="     << std::dec << mods->group
 				<< std::endl;
 		})
-		.on_repeat([](auto keyboard, auto info) {
-			std::cout << "Repeat rate=" << info.rate << "Hz, delay=" << info.delay << "ms\n" << std::endl;
+		.on_repeat([](auto keyboard, auto rate, auto delay) {
+			std::cout << "Repeat rate=" << rate << "Hz, delay=" << delay << "ms\n" << std::endl;
 		})
 		.on_key_pressed([](auto keyboard, auto keycode) {
 			auto server = keyboard->server();
 			auto sym = xkb_state_key_get_one_sym(keyboard->wlr_keyboard()->xkb_state, keycode + 8);
 			if (sym == XKB_KEY_Escape) {
 				server->stop();
+			} else if (sym > XKB_KEY_0 && sym < XKB_KEY_9) {
+				auto output = *server->outputs().begin();
+				auto workspace = server->get_workspace_by_id(sym - XKB_KEY_0);
+				output->switch_to_workspace(workspace);
+				if (moving_window) {
+					moving_window->set_workspace(workspace);
+				}
 			}
 		});
 }
@@ -384,28 +605,52 @@ void setup_input(wlkit::Input * input, struct wlr_input_device * device, wlkit::
 	}
 }
 
-void create_default_workspace(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Server * server) {
-	auto layout = new wlkit::Layout("tiling", nullptr);
-	auto workspace = new wlkit::Workspace(server, layout, 1, "default", nullptr);
-	new wlkit::Workspace(server, layout, 2, "other", nullptr);
-	auto window1 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 1", "app name", nullptr);
-	auto window2 = new wlkit::Window(server, workspace, nullptr, nullptr, "test window 2", "app name", nullptr);
+void create_defaults(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Server * server) {
+	auto layout = new wlkit::Layout("floating", nullptr);
+	auto workspace1 = new wlkit::Workspace(server, layout, 1, "main", nullptr);
+	auto workspace2 = new wlkit::Workspace(server, layout, 2, "work", nullptr);
+	auto workspace3 = new wlkit::Workspace(server, layout, 3, "media", nullptr);
 
-	window1->move(0, 0).resize(300, 400).map();
-	window2->move(200, 100).resize(400, 500).map();
+	auto window1 = new wlkit::Window(server, workspace1,
+		nullptr, nullptr, "Terminal", "kitty", nullptr);
+	auto window2 = new wlkit::Window(server, workspace1,
+		nullptr, nullptr, "Web Browser", "firefox", nullptr);
+	auto window3 = new wlkit::Window(server, workspace2,
+		nullptr, nullptr, "Text Editor", "code", nullptr);
 
-	workspace->focus_window(window1);
-	workspace->focus_window(window2);
-	output->set_workspace(workspace);
+	window1->move(10, 10).resize(400, 300).map();
+	window2->move(200, 100).resize(500, 400).map();
+	window3->move(0, 0).resize(800, 600).map();
+
+	workspace1->focus_window(window1);
+	workspace1->focus_window(window2);
+	workspace2->focus_window(window3);
+
+	output->switch_to_workspace(workspace1);
+}
+
+static void launch_program(const char * name, std::vector<const char*> args) {
+	if (fork() == 0) {
+		args.push_back(nullptr);
+		execvp(name, const_cast<char* const*>(args.data()));
+		perror("execvp failed");
+		_exit(1);
+	}
 }
 
 int main() {
-	auto display = wl_display_create();
-	auto seat = wlr_seat_create(display, "seat0");
-
-	auto server = wlkit::Server(display, seat, setup_portal_env);
+	auto seat = wlkit::Seat("seat0", nullptr);
+	auto server = wlkit::Server(&seat, setup_portal_env);
 
 	server
+		.on_start(setup_portal_env)
+		.on_start([](auto server) {
+			std::cout << GREEN << "✓ Server started successfully!" << RESET << std::endl;
+			print_full_status(server);
+			// wl_event_loop_add_idle(server->event_loop(), [](void * data) {
+			//     launch_program("kitty", {});
+			// }, nullptr);
+		})
 		.on_stop([](auto server) {
 			std::cout
 				<< "outputs: " << server->outputs().size() << std::endl
@@ -415,13 +660,17 @@ int main() {
 				<< "Escape!" << std::endl;
 		})
 		.on_new_output([](auto output, auto wlr_output, auto server) {
+			output->server()->prefer_output(output);
 			// output->on_frame(dummy_draw_frame);
 			output->on_frame(ai_test_draw_frame);
 			output->on_frame(ai_test_draw_status);
 			output->on_frame(draw_cursor);
 		})
-		.on_new_output(setup_output)
-		.on_new_output(create_default_workspace)
 		.on_new_input(setup_input)
+		.on_new_output(setup_output)
+		.on_new_output(create_defaults)
+		.on_new_xdg_shell_toplevel([](auto window, auto xdg_surface, auto output) {
+			window->move(0 ,0).resize(500, 500);
+		})
 		.start();
 }

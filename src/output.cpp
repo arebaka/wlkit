@@ -211,15 +211,15 @@ Output::Scale Output::get_scale() const {
 	return _wlr_output->scale;
 }
 
-wl_output_subpixel Output::subpixel() const {
+enum wl_output_subpixel Output::subpixel() const {
 	return _wlr_output->subpixel;
 }
 
-wl_output_transform Output::get_transform() const {
+enum wl_output_transform Output::get_transform() const {
 	return _wlr_output->transform;
 }
 
-wlr_output_adaptive_sync_status Output::adaptive_sync_status() const {
+enum wlr_output_adaptive_sync_status Output::adaptive_sync_status() const {
 	return _wlr_output->adaptive_sync_status;
 }
 
@@ -247,7 +247,7 @@ Output::CommitSeq Output::commit_seq() const {
 	return _wlr_output->commit_seq;
 }
 
-Output & Output::set_workspace(Workspace * workspace) {
+Output & Output::switch_to_workspace(Workspace * workspace) {
 	_current_workspace = workspace;
 	_workspaces_history->shift(workspace);
 	return *this;

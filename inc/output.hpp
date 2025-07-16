@@ -13,12 +13,13 @@ namespace wlkit {
 class Output {
 public:
 	using Handler = std::function<void(Output*)>;
-	using FrameHandler = std::function<void(Output * output, struct wlr_output * wlr_output, Render * render)>;
+	using FrameHandler = std::function<
+		void(Output * output, struct wlr_output * wlr_output, Render * render)>;
 
 	using Scale = float;
-	using Transform = enum wl_output_transform;
+	using Transform = enum ::wl_output_transform;
 	using RenderFormat = uint32_t;
-	using Subpixel = enum wl_output_subpixel;
+	using Subpixel = enum ::wl_output_subpixel;
 	using Buffer = struct wlr_buffer*;
 	using PixmanRegion = pixman_region32_t*;
 	using LayerStates = struct wlr_output_layer_state*;
@@ -64,8 +65,8 @@ private:
 	struct ::wlr_output * _wlr_output;
 
 	struct ::wlr_scene_output * _scene_output;
-	struct ::wl_event_source * _repaint_timer;
 	struct ::wlr_output_state * _state;
+	struct ::wl_event_source * _repaint_timer;
 
 	struct timespec _last_frame;
 	Workspace * _current_workspace;
@@ -83,7 +84,7 @@ private:
 public:
 	Output(
 		Server * server,
-		struct wlr_output * wlr_output,
+		struct ::wlr_output * wlr_output,
 		const Handler & callback);
 	~Output();
 
@@ -96,10 +97,10 @@ public:
 	Window * window_at(Geo x, Geo y);
 
 	[[nodiscard]] Server * server() const;
-	[[nodiscard]] struct wlr_output * wlr_output() const;
-	[[nodiscard]] struct wlr_scene_output * scene_output() const;
-	[[nodiscard]] struct wl_event_source * repaint_timer() const;
-	[[nodiscard]] struct wlr_output_state * state() const;
+	[[nodiscard]] struct ::wlr_output * wlr_output() const;
+	[[nodiscard]] struct ::wlr_scene_output * scene_output() const;
+	[[nodiscard]] struct ::wl_event_source * repaint_timer() const;
+	[[nodiscard]] struct ::wlr_output_state * state() const;
 	[[nodiscard]] struct timespec last_frame() const;
 	[[nodiscard]] Workspace * current_workspace() const;
 	[[nodiscard]] std::list<Workspace*> workspaces() const;
@@ -118,9 +119,9 @@ public:
 	[[nodiscard]] ModeRefresh refresh_rate() const;
 	[[nodiscard]] bool enabled () const;
 	[[nodiscard]] Scale get_scale() const;
-	[[nodiscard]] wl_output_subpixel subpixel() const;
-	[[nodiscard]] wl_output_transform get_transform() const;
-	[[nodiscard]] wlr_output_adaptive_sync_status adaptive_sync_status() const;
+	[[nodiscard]] enum ::wl_output_subpixel subpixel() const;
+	[[nodiscard]] enum ::wl_output_transform get_transform() const;
+	[[nodiscard]] enum ::wlr_output_adaptive_sync_status adaptive_sync_status() const;
 	[[nodiscard]] RenderFormat render_format() const;
 	[[nodiscard]] bool adaptive_sync_supported() const;
 	[[nodiscard]] bool needs_frame() const;
@@ -128,15 +129,15 @@ public:
 	[[nodiscard]] bool non_desktop() const;
 	[[nodiscard]] CommitSeq commit_seq() const;
 
-	Output & set_workspace(Workspace * workspace);
+	Output & switch_to_workspace(Workspace * workspace);
 	// TODO setters
 
 	Output & on_destroy(const Handler & handler);
 	Output & on_frame(const FrameHandler & handler);
 
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
-	static void _handle_frame(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
+	static void _handle_frame(struct ::wl_listener * listener, void * data);
 	static int _handle_repaint_timer(void * data);
 };
 

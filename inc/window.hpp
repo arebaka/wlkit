@@ -26,8 +26,9 @@ private:
 	char * _title;
 	char * _app_id;
 
-	// struct wlr_foreign_toplevel_handle_v1 * _foreign_toplevel;
+	// struct ::wlr_foreign_toplevel_handle_v1 * _foreign_toplevel;
 
+	bool _is_ready;
 	Geo _x, _y, _width, _height;
 	bool _mapped, _minimized, _maximized, _fullscreened;
 	WorkspacesHistory * _workspaces_history;
@@ -36,14 +37,17 @@ private:
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
 
-	wl_listener _destroy_listener;
+	struct ::wl_listener _map_listener;
+	struct ::wl_listener _unmap_listener;
+	struct ::wl_listener _commit_listener;
+	struct ::wl_listener _destroy_listener;
 
 public:
 	Window(
 		struct Server * server,
 		struct Workspace * workspace,
-		struct wlr_xdg_surface * xdg_surface,
-		struct wlr_xwayland_surface * xwayland_surface,
+		struct ::wlr_xdg_surface * xdg_surface,
+		struct wlr_xwayland_surface * xwayland_surface,  // isnt real wlr_xwayland_surface
 		const char * title,
 		const char * app_id,
 		const Handler & callback);
@@ -63,9 +67,11 @@ public:
 
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] Workspace * workspace() const;
-	[[nodiscard]] WorkspacesHistory * workspaces_history() const;
+	[[nodiscard]] struct ::wlr_xdg_surface * xdg_surface() const;
+	[[nodiscard]] struct wlr_xwayland_surface * xwayland_surface() const;  // isnt real wlr_xwayland_surface
 	[[nodiscard]] const char * title() const;
 	[[nodiscard]] const char * app_id() const;
+	[[nodiscard]] bool is_ready() const;
 	[[nodiscard]] Geo x() const;
 	[[nodiscard]] Geo y() const;
 	[[nodiscard]] Geo width() const;
@@ -74,22 +80,24 @@ public:
 	[[nodiscard]] bool minimized() const;
 	[[nodiscard]] bool maximized() const;
 	[[nodiscard]] bool fullscreened() const;
+	[[nodiscard]] WorkspacesHistory * workspaces_history() const;
 	[[nodiscard]] void * data() const;
-	[[nodiscard]] struct wlr_xdg_surface * xdg_surface() const;
-	[[nodiscard]] struct wlr_xwayland_surface * xwayland_surface() const;
-	// [[nodiscard]] struct wlr_foreign_toplevel_handle_v1 * foreign_toplevel() const;
+	// [[nodiscard]] struct ::wlr_foreign_toplevel_handle_v1 * foreign_toplevel() const;
 
 	Window & set_workspace(Workspace * workspace);
 	Window & set_title(const char * title);
 	Window & set_app_id(const char * app_id);;
 	Window & set_data(void * data);
-	Window & set_xdg_surface(struct wlr_xdg_surface * xdg_surface);
-	Window & set_xwayland_surface(struct wlr_xwayland_surface * xwayland_surface);
+	Window & set_xdg_surface(struct ::wlr_xdg_surface * xdg_surface);
+	Window & set_xwayland_surface(struct wlr_xwayland_surface * xwayland_surface);  // isnt real wlr_xwayland_surface
 
 	Window & on_destroy(const Handler & handler);
 
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
+	static void _handle_map(struct ::wl_listener * listener, void * data);
+	static void _handle_unmap(struct ::wl_listener * listener, void * data);
+	static void _handle_commit(struct ::wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };
 
 class WindowsHistory {

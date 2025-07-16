@@ -47,3 +47,27 @@ Workspace * WorkspacesHistory::previous() const {
 	}
 	return *std::next(_order.begin());
 }
+
+WorkspacesHistory::Iterator WorkspacesHistory::begin() {
+	return _order.begin();
+}
+
+WorkspacesHistory::Iterator WorkspacesHistory::end() {
+	return _order.end();
+}
+
+WorkspacesHistory::ConstIterator WorkspacesHistory::begin() const {
+	return _order.begin();
+}
+
+WorkspacesHistory::ConstIterator WorkspacesHistory::end() const {
+	return _order.end();
+}
+
+WorkspacesHistory::ConstIterator WorkspacesHistory::cbegin() const {
+	return _order.cbegin();
+}
+
+WorkspacesHistory::ConstIterator WorkspacesHistory::cend() const {
+	return _order.cend();
+}

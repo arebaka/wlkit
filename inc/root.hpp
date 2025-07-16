@@ -26,12 +26,12 @@ private:
 	Cursor * _cursor;
 	void * _data;
 
-	// struct wl_list layers;
+	// struct ::wl_list layers;
 
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
 
-	struct wl_listener _destroy_listener;
+	struct ::wl_listener _destroy_listener;
 
 public:
 	Root(
@@ -41,10 +41,10 @@ public:
 		const Handler & callback);
 	~Root();
 
-	[[nodiscard]] struct wlr_scene * scene() const;
-	[[nodiscard]] struct wlr_output_layout * output_layout() const;
-	[[nodiscard]] struct wlr_scene_tree * staging() const;
-	[[nodiscard]] struct wlr_scene_tree * layer_tree() const;
+	[[nodiscard]] struct ::wlr_scene * scene() const;
+	[[nodiscard]] struct ::wlr_output_layout * output_layout() const;
+	[[nodiscard]] struct ::wlr_scene_tree * staging() const;
+	[[nodiscard]] struct ::wlr_scene_tree * layer_tree() const;
 	[[nodiscard]] Geo x() const;
 	[[nodiscard]] Geo y() const;
 	[[nodiscard]] Geo width() const;
@@ -53,7 +53,7 @@ public:
 	Root & on_destroy(const Handler & handler);
 
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };
 
 }

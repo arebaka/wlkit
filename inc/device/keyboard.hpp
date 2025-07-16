@@ -4,7 +4,7 @@ extern "C" {
 #include <wlr/types/wlr_keyboard.h>
 }
 
-#include "input.hpp"
+#include "../input.hpp"
 #include "pointer.hpp"
 
 namespace wlkit {
@@ -32,11 +32,17 @@ public:
 	using Keycode = uint32_t;
 	using ModMask = uint32_t;
 	using LEDsMask = uint32_t;
+	using RepeatRate = int32_t;
+	using RepeatDelay = int32_t;
 
-	using KeyHandler = std::function<void(Keyboard * keyboard, Keycode keycode, bool state)>;
-	using KeyStateHandler = std::function<void(Keyboard * keyboard, Keycode keycode)>;
-	using ModHandler = std::function<void(Keyboard * keyboard, struct ::wlr_keyboard_modifiers * mods)>;
-	using RepeatHandler = std::function<void(Keyboard * keyboard, RepeatInfo info)>;
+	using KeyHandler = std::function<
+		void(Keyboard * keyboard, Keycode keycode, bool state)>;
+	using KeyStateHandler = std::function<
+		void(Keyboard * keyboard, Keycode keycode)>;
+	using ModHandler = std::function<
+		void(Keyboard * keyboard, struct ::wlr_keyboard_modifiers * mods)>;
+	using RepeatHandler = std::function<
+		void(Keyboard * keyboard, RepeatRate rate, RepeatDelay delay)>;
 
 private:
 	struct ::wlr_keyboard * _kbd;
@@ -52,9 +58,9 @@ private:
 	std::list<ModHandler> _on_mod;
 	std::list<RepeatHandler> _on_repeat;
 
-	wl_listener _key_listener;
-	wl_listener _mod_listener;
-	wl_listener _repeat_listener;
+	struct ::wl_listener _key_listener;
+	struct ::wl_listener _mod_listener;
+	struct ::wl_listener _repeat_listener;
 
 public:
 	Keyboard(
@@ -95,9 +101,9 @@ public:
 	Keyboard & on_repeat(const RepeatHandler & handler);
 
 private:
-	static void _handle_key(struct wl_listener * listener, void * data);
-	static void _handle_mod(struct wl_listener * listener, void * data);
-	static void _handle_repeat(struct wl_listener * listener, void * data);
+	static void _handle_key(struct ::wl_listener * listener, void * data);
+	static void _handle_mod(struct ::wl_listener * listener, void * data);
+	static void _handle_repeat(struct ::wl_listener * listener, void * data);
 };
 
 }

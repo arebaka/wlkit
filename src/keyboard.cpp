@@ -5,7 +5,7 @@
 
 using namespace wlkit;
 
-Keyboard::Keyboard(Server * server, struct ::wlr_input_device * device, const Handler & callback):
+Keyboard::Keyboard(Server * server, struct wlr_input_device * device, const Handler & callback):
 Input(server, Type::KEYBOARD, device, callback),
 _rules(nullptr), _model(nullptr), _layout(nullptr), _variant(nullptr), _options(nullptr) {
 	_kbd = wlr_keyboard_from_input_device(_device);
@@ -219,6 +219,6 @@ void Keyboard::_handle_repeat(struct wl_listener * listener, void * data) {
 	}
 
  	for (auto & cb : keyboard->_on_repeat) {
-		cb(keyboard, *info);
+		cb(keyboard, info->rate, info->delay);
 	}
 }

@@ -56,6 +56,20 @@ Root & Node::on_destroy(const Handler & handler) {
 	}
 }
 
+struct wlr_scene_tree * Node::alloc_scene_tree(struct wlr_scene_tree * parent, bool * failed) {
+	if (*failed) {
+		return nullptr;
+	}
+
+	struct wlr_scene_tree * tree = wlr_scene_tree_create(parent);
+	if (!tree) {
+		*failed = true;
+	}
+
+	return tree;
+}
+
+
 void Node::_handle_destroy(struct wl_listener * listener, void * data) {
 	Node * it = wl_container_of(listener, it, _destroy_listener);
 	delete it;

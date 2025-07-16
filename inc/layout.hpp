@@ -15,7 +15,7 @@ private:
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
 
-	wl_listener _destroy_listener;
+	struct ::wl_listener _destroy_listener;
 
 public:
 	Layout(
@@ -36,7 +36,7 @@ public:
 	Layout & on_destroy(const Handler & handler);
 
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };
 
 }

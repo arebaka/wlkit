@@ -29,8 +29,10 @@ extern "C" {
 
 namespace wlkit {
 
-using Geo = int32_t;
+using Geo = double;
+using Time = uint32_t;
 
+class Seat;
 class Server;
 class Root;
 class Node;
@@ -44,11 +46,13 @@ class Layout;
 class Window;
 class WindowsHistory;
 class Input;
+class Surface;
 
 class Keyboard;
 class Pointer;
 
 using Object = std::variant<
+	Seat*,
 	Server*,
 	Root*,
 	Node*,
@@ -58,7 +62,8 @@ using Object = std::variant<
 	Workspace*,
 	Window*,
 	Input*,
-	Keyboard*
+	Keyboard*,
+	Pointer*
 >;
 
 }

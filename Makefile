@@ -1,6 +1,7 @@
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++20 -O2 -g
-LDFLAGS = -lwayland-server -lwlroots-0.19 -lxkbcommon -lpixman-1 -lm
+CXXFLAGS = -std=c++20 -O2 -g3
+CXXFLAGS += -Wall -Wextra -Wpedantic -Wshadow -Wformat=2 -Wcast-align -Wconversion -Wsign-conversion -Wnull-dereference
+LDFLAGS = -lm
 
 SRCDIR = src
 INCDIR = inc

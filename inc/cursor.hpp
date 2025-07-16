@@ -25,7 +25,7 @@ private:
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
 
-	wl_listener _destroy_listener;
+	struct ::wl_listener _destroy_listener;
 
 public:
 	Cursor(
@@ -36,8 +36,8 @@ public:
 	~Cursor();
 
 	[[nodiscard]] Root * root() const;
-	[[nodiscard]] struct wlr_cursor * wlr_cursor() const;
-	[[nodiscard]] struct wlr_xcursor_manager * wlr_xcursor_manager() const;
+	[[nodiscard]] struct ::wlr_cursor * wlr_cursor() const;
+	[[nodiscard]] struct ::wlr_xcursor_manager * wlr_xcursor_manager() const;
 	[[nodiscard]] void * data() const;
 
 	Cursor & set_data(void * data);
@@ -45,7 +45,7 @@ public:
 	Cursor & on_destroy(const Handler & handler);
 
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };
 
 }

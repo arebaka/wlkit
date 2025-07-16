@@ -2,7 +2,6 @@
 
 extern "C" {
 #include <wlr/backend.h>
-#include <wlr/types/wlr_seat.h>
 #include <wlr/backend/session.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/allocator.h>
@@ -31,21 +30,32 @@ extern "C" {
 }
 
 #include "common.hpp"
+#include "seat.hpp"
 #include "workspace.hpp"
 
 namespace wlkit {
 
 class Server {
 public:
+	struct PendingXDGWindow {
+		struct ::wl_listener listener;
+		Server * server;
+		Workspace * workspace;
+	};
+
 	using Handler = std::function<void(Server*)>;
-	using NewOutputHandler = std::function<void(Output * output, wlr_output * wlr_output, Server * server)>;
-	using NewInputHandler = std::function<void(Input * input, wlr_input_device * device, Server * server)>;
+	using NewOutputHandler = std::function<
+		void(Output * output, struct ::wlr_output * wlr_output, Server * server)>;
+	using NewInputHandler = std::function<
+		void(Input * input, struct ::wlr_input_device * device, Server * server)>;
+	using NewXDGShellToplevelHandler = std::function<
+		void(Window * window, struct ::wlr_xdg_surface * xdg_surface, Output * output)>;
 
 private:
-	struct wl_display * _display;
-	struct wl_event_loop * _event_loop;
+	Seat * _seat;
 
-	struct ::wlr_seat * _seat;
+	struct ::wl_display * _display;
+	struct ::wl_event_loop * _event_loop;
 	struct ::wlr_backend * _backend;
 	struct ::wlr_session * _session;
 	struct ::wlr_renderer * _renderer;
@@ -54,24 +64,24 @@ private:
 
 	Root * _root;
 	const char * _socket_id;
-    bool _inside_wl;
+	bool _inside_wl;
 	bool _running;
+	Output * _preferred_output;
 	std::list<Output*> _outputs;
 	std::list<Input*> _inputs;
 	std::list<Workspace*> _workspaces;
 	std::list<Window*> _windows;
 	WindowsHistory * _windows_history;
-	// struct wl_list _decorations;
-	// struct wl_list _xdg_decorations;
+	// struct ::wl_list _decorations;
+	// struct ::wl_list _xdg_decorations;
 	void * _data;
 
 	struct ::wlr_xdg_shell * _xdg_shell;
 	// struct wlr_foreign_toplevel_manager_v1 * _foreign_toplevel_manager_v1;
-	struct wlr_data_device_manager * _data_device_manager;
+	struct ::wlr_data_device_manager * _data_device_manager;
 	// struct wlr_idle_notifier_v1 * _idle_notifier_v1;
-	struct wlr_linux_dmabuf_v1 * _linux_dmabuf_v1;
+	struct ::wlr_linux_dmabuf_v1 * _linux_dmabuf_v1;
 	// struct wlr_xdg_activation_v1 * _xdg_activation_v1;
-	struct wlr_pointer_constraints_v1 * pointer_constraints_v1;
 
 	// // struct wlr_content_type_manager_v1 * content_type_manager_v1;
 	// struct wlr_data_control_manager_v1 * _wlr_data_control_manager_v1;
@@ -97,50 +107,53 @@ private:
 	std::list<Handler> _on_stop;
 	std::list<NewOutputHandler> _on_new_output;
 	std::list<NewInputHandler> _on_new_input;
+	std::list<NewXDGShellToplevelHandler> _on_new_xdg_shell_toplevel;
 
-	struct wl_listener _destroy_listener;
-	struct wl_listener _renderer_lost_listener;
-	struct wl_listener _new_xdg_shell_toplevel_listener;
-	struct wl_listener _new_output_listener;
-	struct wl_listener _new_input_listener;
-	struct wl_listener _new_xdg_surface_listener;
-	// struct wl_listener _xdg_activation_v1_destroy_listener;
-	// struct wl_listener _xdg_activation_v1_request_activate_listener;
-	// struct wl_listener _xdg_activation_v1_new_token_listener;
-	// struct wl_listener _xdg_shell_toplevel_listener;
-	// struct wl_listener _new_foreign_toplevel_capture_request_listener;
-	// struct wl_listener _new_server_decoration_listener;
-	// struct wl_listener _new_xdg_decoration_listener;
+	struct ::wl_listener _destroy_listener;
+	struct ::wl_listener _renderer_lost_listener;
+	struct ::wl_listener _new_xdg_shell_toplevel_listener;
+	struct ::wl_listener _new_output_listener;
+	struct ::wl_listener _new_input_listener;
+	struct ::wl_listener _new_xdg_surface_listener;
+	// struct ::wl_listener _xdg_activation_v1_destroy_listener;
+	// struct ::wl_listener _xdg_activation_v1_request_activate_listener;
+	// struct ::wl_listener _xdg_activation_v1_new_token_listener;
+	// struct ::wl_listener _xdg_shell_toplevel_listener;
+	// struct ::wl_listener _new_foreign_toplevel_capture_request_listener;
+	// struct ::wl_listener _new_server_decoration_listener;
+	// struct ::wl_listener _new_xdg_decoration_listener;
 
 public:
 	Server(
-		struct wl_display * display,
-		struct wlr_seat * seat,
+		Seat * seat,
 		const Handler & callback);
 
 	~Server();
 
+	Workspace * get_workspace_by_id(Workspace::ID id);
+
 	Server & start();
 	Server & stop();
-	Workspace * get_workspace_by_id(Workspace::ID id);
 	Server & add_workspace(Workspace * workspace);
 	Server & add_window(Window * window);
 	Server & remove_workspace(Workspace * workspace);
 	Server & remove_window(Window * window);
+	Server & prefer_output(Output * output);
 
-	[[nodiscard]] wl_display * display() const;
-	[[nodiscard]] wl_event_loop * event_loop() const;
-	[[nodiscard]] wlr_seat * seat() const;
-	[[nodiscard]] wlr_backend * backend() const;
-	[[nodiscard]] wlr_session * session() const;
-	[[nodiscard]] wlr_renderer * renderer() const;
-	[[nodiscard]] wlr_allocator * allocator() const;
-	[[nodiscard]] wlr_compositor * compositor() const;
+	[[nodiscard]] struct ::wl_display * display() const;
+	[[nodiscard]] struct ::wl_event_loop * event_loop() const;
+	[[nodiscard]] struct ::wlr_backend * backend() const;
+	[[nodiscard]] struct ::wlr_session * session() const;
+	[[nodiscard]] struct ::wlr_renderer * renderer() const;
+	[[nodiscard]] struct ::wlr_allocator * allocator() const;
+	[[nodiscard]] struct ::wlr_compositor * compositor() const;
 
+	[[nodiscard]] Seat * seat() const;
 	[[nodiscard]] Root * root() const;
 	[[nodiscard]] const char * socket_id() const;
 	[[nodiscard]] bool inside_wl() const;
 	[[nodiscard]] bool running() const;
+	[[nodiscard]] Output * preferred_output() const;
 	[[nodiscard]] void * data() const;
 
 	[[nodiscard]] std::list<Output*> outputs() const;
@@ -149,7 +162,7 @@ public:
 	[[nodiscard]] std::list<Window*> windows() const;
 	[[nodiscard]] WindowsHistory * windows_history() const;
 
-	[[nodiscard]] wlr_xdg_shell * xdg_shell() const;
+	[[nodiscard]] struct ::wlr_xdg_shell * xdg_shell() const;
 
 	Server & set_data(void * data);
 	// TODO setters
@@ -159,18 +172,18 @@ public:
 	Server & on_stop(const Handler & handler);
 	Server & on_new_output(const NewOutputHandler & handler);
 	Server & on_new_input(const NewInputHandler & handler);
+	Server & on_new_xdg_shell_toplevel(const NewXDGShellToplevelHandler & handler);
 
 private:
-	static void _handle_destroy(struct wl_listener * listener, void * data);
-	static void _handle_new_output(struct wl_listener * listener, void * data);
-	static void _handle_new_input(struct wl_listener * listener, void * data);
-	static void _handle_new_xdg_surface(struct wl_listener * listener, void * data);
-	static void _handle_new_xdg_shell_toplevel(struct wl_listener * listener, void * data);
-	static void _handle_xdg_activation_v1_destroy(struct wl_listener * listener, void * data);
-	static void _handle_xdg_activation_v1_request_activate(struct wl_listener * listener, void * data);
-	static void _handle_xdg_activation_v1_new_token(struct wl_listener * listener, void * data);
-	static void _handle_new_server_decoration(struct wl_listener * listener, void * data);
-	static void _handle_new_xdg_decoration(struct wl_listener * listener, void * data);
+	static void _handle_destroy(struct ::wl_listener * listener, void * data);
+	static void _handle_new_output(struct ::wl_listener * listener, void * data);
+	static void _handle_new_input(struct ::wl_listener * listener, void * data);
+	static void _handle_new_xdg_shell_toplevel(struct ::wl_listener * listener, void * data);
+	static void _handle_xdg_activation_v1_destroy(struct ::wl_listener * listener, void * data);
+	static void _handle_xdg_activation_v1_request_activate(struct ::wl_listener * listener, void * data);
+	static void _handle_xdg_activation_v1_new_token(struct ::wl_listener * listener, void * data);
+	static void _handle_new_server_decoration(struct ::wl_listener * listener, void * data);
+	static void _handle_new_xdg_decoration(struct ::wl_listener * listener, void * data);
 };
 
 }

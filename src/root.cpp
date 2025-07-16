@@ -6,19 +6,6 @@
 
 using namespace wlkit;
 
-static struct wlr_scene_tree * alloc_scene_tree(struct wlr_scene_tree * parent, bool * failed) {
-	if (*failed) {
-		return nullptr;
-	}
-
-	struct wlr_scene_tree * tree = wlr_scene_tree_create(parent);
-	if (!tree) {
-		*failed = true;
-	}
-
-	return tree;
-}
-
 Root::Root(Server * server, char * cursor_name, const Cursor::Size & cursor_size, const Handler & callback):
 _server(server), _x(0), _y(0), _width(0), _height(0), _data(nullptr) {
 	if (!_server || !_server->display()) {
@@ -36,8 +23,8 @@ _server(server), _x(0), _y(0), _width(0), _height(0), _data(nullptr) {
 	}
 
 	bool failed = false;
-	_staging = alloc_scene_tree(&_scene->tree, &failed);
-	_layer_tree = alloc_scene_tree(&_scene->tree, &failed);
+	_staging = Node::alloc_scene_tree(&_scene->tree, &failed);
+	_layer_tree = Node::alloc_scene_tree(&_scene->tree, &failed);
 	if (failed) {
 		// TODO error
 	}
@@ -104,7 +91,7 @@ Root & Root::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));
 	}
-    return *this;
+	return *this;
 }
 
 void Root::_handle_destroy(struct wl_listener * listener, void * data) {
