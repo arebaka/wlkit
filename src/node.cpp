@@ -71,6 +71,6 @@ struct wlr_scene_tree * Node::alloc_scene_tree(struct wlr_scene_tree * parent, b
 
 
 void Node::_handle_destroy(struct wl_listener * listener, void * data) {
-	Node * it = wl_container_of(listener, it, _destroy_listener);
-	delete it;
+	Node * node = wl_container_of(listener, node, _destroy_listener);
+	delete node;
 }

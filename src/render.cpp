@@ -12,9 +12,29 @@ _output(output), _data(nullptr) {
 	_state = new wlr_output_state{};
 	wlr_output_state_init(_state);
 
+	pixman_region32_t buffer_damage;
+	pixman_region32_init(&buffer_damage);
+
+	// bool needs_frame;
+	// if (!wlr_output_damage_attach_render(output->damage, &needs_frame, &buffer_damage)) {
+	// 	wlr_output_state_finish(_state);
+	// 	pixman_region32_fini(&buffer_damage);
+	// 	free(_state);
+	// 	// TODO error
+	// }
+
+	// if (!needs_frame) {
+	//	wlr_output_rollback(output->wlr_output);
+	// 	wlr_output_state_finish(_state);
+	// 	pixman_region32_fini(&buffer_damage);
+	// 	free(_state);
+	// }
+
 	_pass = wlr_output_begin_render_pass(_output->wlr_output(), _state, pass_opts);
 	if (!_pass) {
 		wlr_output_state_finish(_state);
+		pixman_region32_fini(&buffer_damage);
+		free(_state);
 		// TODO error
 	}
 
@@ -77,6 +97,6 @@ Render & Render::on_destroy(const Handler & handler) {
 }
 
 void Render::_handle_destroy(struct wl_listener * listener, void * data) {
-	Render * it = wl_container_of(listener, it, _destroy_listener);
-	delete it;
+	Render * render = wl_container_of(listener, render, _destroy_listener);
+	delete render;
 }

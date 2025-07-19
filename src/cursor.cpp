@@ -61,6 +61,6 @@ Cursor & Cursor::on_destroy(const Handler & handler) {
 }
 
 void Cursor::_handle_destroy(struct wl_listener * listener, void * data) {
-	Cursor * it = wl_container_of(listener, it, _destroy_listener);
-	delete it;
+	Cursor * cursor = wl_container_of(listener, cursor, _destroy_listener);
+	delete cursor;
 }

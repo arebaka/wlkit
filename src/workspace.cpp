@@ -102,6 +102,6 @@ Workspace & Workspace::on_destroy(const Handler & handler) {
 }
 
 void Workspace::_handle_destroy(struct wl_listener * listener, void * data) {
-	Workspace * it = wl_container_of(listener, it, _destroy_listener);
-	delete it;
+	Workspace * workspace = wl_container_of(listener, workspace, _destroy_listener);
+	delete workspace;
 }

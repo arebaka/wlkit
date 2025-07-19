@@ -68,6 +68,7 @@ private:
 	struct ::wlr_output_state * _state;
 	struct ::wl_event_source * _repaint_timer;
 
+	Geo _x, _y;
 	struct timespec _last_frame;
 	Workspace * _current_workspace;
 	std::list<Workspace*> _workspaces;
@@ -101,6 +102,8 @@ public:
 	[[nodiscard]] struct ::wlr_scene_output * scene_output() const;
 	[[nodiscard]] struct ::wl_event_source * repaint_timer() const;
 	[[nodiscard]] struct ::wlr_output_state * state() const;
+	[[nodiscard]] Geo x() const;
+	[[nodiscard]] Geo y() const;
 	[[nodiscard]] struct timespec last_frame() const;
 	[[nodiscard]] Workspace * current_workspace() const;
 	[[nodiscard]] std::list<Workspace*> workspaces() const;
@@ -130,6 +133,9 @@ public:
 	[[nodiscard]] CommitSeq commit_seq() const;
 
 	Output & switch_to_workspace(Workspace * workspace);
+
+	Output & set_x(Geo x);
+	Output & set_y(Geo y);
 	// TODO setters
 
 	Output & on_destroy(const Handler & handler);

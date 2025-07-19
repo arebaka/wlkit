@@ -6,8 +6,24 @@ extern "C" {
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/allocator.h>
 #include <wlr/types/wlr_compositor.h>
-#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_xdg_output_v1.h>
+#include <wlr/types/wlr_xdg_shell.h>
+#define namespace namespace_
+#include <wlr/types/wlr_layer_shell_v1.h>
+#undef namespace
+// #define class class_
+// #include <wlr/xwayland.h>
+// #undef class
+#include <wlr/types/wlr_gamma_control_v1.h>
+#include <wlr/types/wlr_screencopy_v1.h>
+#include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <wlr/types/wlr_virtual_pointer_v1.h>
+#include <wlr/types/wlr_server_decoration.h>
+#include <wlr/types/wlr_xdg_decoration_v1.h>
+
+
+
 // #include <wlr/types/wlr_idle_notify_v1.h>
 // #include <wlr/types/wlr_linux_dmabuf_v1.h>
 // #include <wlr/types/wlr_linux_dmabuf_v1.h>
@@ -44,11 +60,13 @@ public:
 	};
 
 	using Handler = std::function<void(Server*)>;
+	using OutputLayoutChangeHandler = std::function<
+		void(Server * server, struct ::wlr_output_layout * layout)>;
 	using NewOutputHandler = std::function<
 		void(Output * output, struct ::wlr_output * wlr_output, Server * server)>;
 	using NewInputHandler = std::function<
 		void(Input * input, struct ::wlr_input_device * device, Server * server)>;
-	using NewXDGShellToplevelHandler = std::function<
+	using NewXDGShellSurfaceHandler = std::function<
 		void(Window * window, struct ::wlr_xdg_surface * xdg_surface, Output * output)>;
 
 private:
@@ -76,9 +94,26 @@ private:
 	// struct ::wl_list _xdg_decorations;
 	void * _data;
 
-	struct ::wlr_xdg_shell * _xdg_shell;
-	// struct wlr_foreign_toplevel_manager_v1 * _foreign_toplevel_manager_v1;
 	struct ::wlr_data_device_manager * _data_device_manager;
+	struct ::wlr_output_layout * _output_layout;
+	struct ::wlr_xdg_output_manager_v1 * _output_manager;
+	struct ::wlr_xdg_shell * _xdg_shell;
+	struct ::wlr_layer_shell_v1 * _layer_shell;
+	// struct ::wlr_xwayland * _xwayland;
+
+	struct ::wlr_gamma_control_manager_v1 * _gamma_control_manager;
+	struct ::wlr_screencopy_manager_v1 * _screencopy_manager;
+	struct ::wlr_virtual_keyboard_manager_v1 * _virtual_keyboard_manager;
+	struct ::wlr_virtual_pointer_manager_v1 * _virtual_pointer_manager;
+	struct ::wlr_server_decoration_manager * _decoration_manager;
+	struct ::wlr_xdg_decoration_manager_v1 * _xdg_decoration_manager;
+
+
+
+
+
+
+	// struct wlr_foreign_toplevel_manager_v1 * _foreign_toplevel_manager_v1;
 	// struct wlr_idle_notifier_v1 * _idle_notifier_v1;
 	struct ::wlr_linux_dmabuf_v1 * _linux_dmabuf_v1;
 	// struct wlr_xdg_activation_v1 * _xdg_activation_v1;
@@ -105,16 +140,28 @@ private:
 	std::list<Handler> _on_destroy;
 	std::list<Handler> _on_start;
 	std::list<Handler> _on_stop;
+	std::list<OutputLayoutChangeHandler> _on_output_layout_change;
 	std::list<NewOutputHandler> _on_new_output;
 	std::list<NewInputHandler> _on_new_input;
-	std::list<NewXDGShellToplevelHandler> _on_new_xdg_shell_toplevel;
+	std::list<NewXDGShellSurfaceHandler> _on_new_xdg_shell_surface;
+	std::list<NewXDGShellSurfaceHandler> _on_new_xdg_shell_toplevel;
+	std::list<NewXDGShellSurfaceHandler> _on_new_xdg_shell_popup;
 
 	struct ::wl_listener _destroy_listener;
-	struct ::wl_listener _renderer_lost_listener;
-	struct ::wl_listener _new_xdg_shell_toplevel_listener;
+	struct ::wl_listener _output_layout_change_listener;
 	struct ::wl_listener _new_output_listener;
 	struct ::wl_listener _new_input_listener;
-	struct ::wl_listener _new_xdg_surface_listener;
+	struct ::wl_listener _new_xdg_shell_surface_listener;
+	struct ::wl_listener _new_xdg_shell_toplevel_listener;
+	struct ::wl_listener _new_xdg_shell_popup_listener;
+	struct ::wl_listener _new_layer_shell_surface_listener;
+	struct ::wl_listener _new_xwayland_surface_listener;
+	struct ::wl_listener _new_virtual_keyboard_listener;
+	struct ::wl_listener _new_virtual_pointer_listener;
+	struct ::wl_listener _new_decoration_listener;
+	struct ::wl_listener _new_xdg_toplevel_decoration_listener;
+
+	struct ::wl_listener _renderer_lost_listener;
 	// struct ::wl_listener _xdg_activation_v1_destroy_listener;
 	// struct ::wl_listener _xdg_activation_v1_request_activate_listener;
 	// struct ::wl_listener _xdg_activation_v1_new_token_listener;
@@ -170,15 +217,28 @@ public:
 	Server & on_destroy(const Handler & handler);
 	Server & on_start(const Handler & handler);
 	Server & on_stop(const Handler & handler);
+	Server & on_output_layout_change(const OutputLayoutChangeHandler & handler);
 	Server & on_new_output(const NewOutputHandler & handler);
 	Server & on_new_input(const NewInputHandler & handler);
-	Server & on_new_xdg_shell_toplevel(const NewXDGShellToplevelHandler & handler);
+	Server & on_new_xdg_shell_surface(const NewXDGShellSurfaceHandler & handler);
+	Server & on_new_xdg_shell_toplevel(const NewXDGShellSurfaceHandler & handler);
+	Server & on_new_xdg_shell_popup(const NewXDGShellSurfaceHandler & handler);
 
 private:
 	static void _handle_destroy(struct ::wl_listener * listener, void * data);
+	static void _handle_output_layout_change(struct ::wl_listener * listener, void * data);
 	static void _handle_new_output(struct ::wl_listener * listener, void * data);
 	static void _handle_new_input(struct ::wl_listener * listener, void * data);
+	static void _handle_new_xdg_shell_surface(struct ::wl_listener * listener, void * data);
 	static void _handle_new_xdg_shell_toplevel(struct ::wl_listener * listener, void * data);
+	static void _handle_new_xdg_shell_popup(struct ::wl_listener * listener, void * data);
+	static void _handle_new_layer_shell_surface(struct ::wl_listener * listener, void * data);
+	static void _handle_new_xwayland_surface(struct ::wl_listener * listener, void * data);
+	static void _handle_new_virtual_keyboard(struct ::wl_listener * listener, void * data);
+	static void _handle_new_virtual_pointer(struct ::wl_listener * listener, void * data);
+	static void _handle_new_decoration(struct ::wl_listener * listener, void * data);
+	static void _handle_new_xdg_toplevel_decoration(struct ::wl_listener * listener, void * data);
+
 	static void _handle_xdg_activation_v1_destroy(struct ::wl_listener * listener, void * data);
 	static void _handle_xdg_activation_v1_request_activate(struct ::wl_listener * listener, void * data);
 	static void _handle_xdg_activation_v1_new_token(struct ::wl_listener * listener, void * data);

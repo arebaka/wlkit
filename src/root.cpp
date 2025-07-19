@@ -95,6 +95,6 @@ Root & Root::on_destroy(const Handler & handler) {
 }
 
 void Root::_handle_destroy(struct wl_listener * listener, void * data) {
-	Root * it = wl_container_of(listener, it, _destroy_listener);
-	delete it;
+	Root * root = wl_container_of(listener, root, _destroy_listener);
+	delete root;
 }

@@ -6,13 +6,16 @@
 
 using namespace wlkit;
 
-Seat::Seat(char * name, const Handler & callback):
-_name(name) {
+Seat::Seat(char * name, const Handler & callback) {
+	_name = strdup(name ? name : "");
 	_display = wl_display_create();
 	_wlr_seat = wlr_seat_create(_display, strdup(_name ? _name : ""));
 	if (!_wlr_seat) {
 		// TODO error
 	}
+
+	wlr_seat_set_capabilities(_wlr_seat,
+		WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_TOUCH);
 
 	_destroy_listener.notify = _handle_destroy;
 	wl_signal_add(&_wlr_seat->events.destroy, &_destroy_listener);
@@ -50,7 +53,6 @@ _name(name) {
 }
 
 Seat::~Seat() {
-	wlr_seat_destroy(_wlr_seat);
 	free(_name);
 }
 

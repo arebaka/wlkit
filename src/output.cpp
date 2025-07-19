@@ -253,6 +253,16 @@ Output & Output::switch_to_workspace(Workspace * workspace) {
 	return *this;
 }
 
+Output & Output::set_x(Geo x) {
+	_x = x;
+	return *this;
+}
+
+Output & Output::set_y(Geo y) {
+	_y = y;
+	return *this;
+}
+
 Output & Output::on_destroy(const Handler & handler) {
 	if (handler) {
 		_on_destroy.push_back(std::move(handler));

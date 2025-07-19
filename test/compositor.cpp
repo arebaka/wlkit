@@ -85,7 +85,7 @@ void print_workspace_info(wlkit::Server * server) {
 			std::cout << "  Layout: " << ws->layout()->name() << std::endl;
 		}
 
-		if (ws->focused_window() && ws->focused_window()->is_ready()) {
+		if (ws->focused_window() && ws->focused_window()->ready()) {
 			std::cout << "  Focused: " << MAGENTA << ws->focused_window()->title() << RESET << std::endl;
 		}
 
@@ -233,9 +233,9 @@ void print_full_status(wlkit::Server * server) {
 }
 
 void setup_portal_env(const wlkit::Server * server) {
-	setenv("XDG_CURRENT_DESKTOP", "wlkit", 1);
-	setenv("XDG_SESSION_TYPE", "wayland", 1);
-	setenv("XDG_SESSION_DESKTOP", "wlkit", 1);
+	setenv("XDG_CURRENT_DESKTOP", "wlkit", true);
+	setenv("XDG_SESSION_TYPE", "wayland", true);
+	setenv("XDG_SESSION_DESKTOP", "wlkit", true);
 }
 
 void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
@@ -465,21 +465,79 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 	// 3) Окна на текущем воркспейсе
 	// ––––––––––––––––––––––––––––––––––––––––––
 	for (auto win : output->current_workspace()->windows()) {
-		if (!win->is_ready()) {
-			// continue;
-		}
-		// получаем геометрию окна
-		int x = win->x();
-		int y = win->y() + tab_h;  // сдвиг вниз под панель
-		int w = win->width();
-		int h = win->height();
+		if (!win->xdg_surface()) {
+			// получаем геометрию окна
+			int x = win->x();
+			int y = win->y() + tab_h;  // сдвиг вниз под панель
+			int w = win->width();
+			int h = win->height();
 
-		bool focused = win == win->workspace()->focused_window();
-		struct wlr_render_rect_options w_opts = {
-			.box = { .x = x, .y = y, .width = w, .height = h },
-			.color = { focused ? 0.8f : 0.5f, focused ? 0.8f : 0.5f, focused ? 0.2f : 0.5f, focused ? 0.8f : 0.5f }
+			bool focused = win == win->workspace()->focused_window();
+			struct wlr_render_rect_options w_opts = {
+				.box = { .x = x, .y = y, .width = w, .height = h },
+				.color = { focused ? 0.8f : 0.5f, focused ? 0.8f : 0.5f, focused ? 0.2f : 0.5f, focused ? 0.8f : 0.5f }
+			};
+			wlr_render_pass_add_rect(pass, &w_opts);
+			continue;
+		}
+
+		if (!win->ready() || !win->dirty()) {
+			continue;
+		}
+
+		typedef struct {
+			wlkit::Window * window;
+			wlkit::Output * output;
+			wlr_render_pass * pass;
+		} Context;
+
+		auto context = new Context{
+			.window = win,
+			.output = output,
+			.pass = pass,
 		};
-		wlr_render_pass_add_rect(pass, &w_opts);
+
+		auto xdg_surface = win->xdg_surface();
+		wlr_xdg_surface_for_each_surface(xdg_surface, [](auto surface, auto sx, auto sy, auto data) {
+			auto context = static_cast<Context*>(data);
+			auto win = context->window;
+			auto output = context->output;
+			auto pass = context->pass;
+
+			auto texture = wlr_surface_get_texture(surface);
+			if (!texture) {
+				return;
+			}
+
+			uint32_t tex_w = surface->current.width;
+			uint32_t tex_h = surface->current.height;
+
+			struct wlr_box dst = {
+				.x = win->x(),
+				.y = win->y(),
+				.width = tex_w,
+				.height = tex_h,
+			};
+
+			struct wlr_fbox src = {
+				.x = 0,
+				.y = 0,
+				.width = tex_w,
+				.height = tex_h,
+			};
+
+			struct wlr_render_texture_options opts = {
+				.texture = texture,
+				.src_box = src,
+				.dst_box = dst,
+				.alpha = NULL,
+				.transform = output->get_transform(),
+			};
+
+			wlr_render_pass_add_texture(pass, &opts);
+		}, context);
+
+		win->drawn();
 	}
 }
 
@@ -552,6 +610,13 @@ void setup_keyboard(wlkit::Keyboard * keyboard) {
 				if (moving_window) {
 					moving_window->set_workspace(workspace);
 				}
+			}
+		})
+		.on_key_pressed([](auto keyboard, auto keycode) {
+			auto server = keyboard->server();
+			auto sym = xkb_state_key_get_one_sym(keyboard->wlr_keyboard()->xkb_state, keycode + 8);
+			if (sym == XKB_KEY_F4) {
+				print_window_info(server);
 			}
 		});
 }
@@ -639,6 +704,7 @@ static void launch_program(const char * name, std::vector<const char*> args) {
 }
 
 int main() {
+	wlr_log_init(WLR_INFO, NULL);
 	auto seat = wlkit::Seat("seat0", nullptr);
 	auto server = wlkit::Server(&seat, setup_portal_env);
 
@@ -647,9 +713,9 @@ int main() {
 		.on_start([](auto server) {
 			std::cout << GREEN << "✓ Server started successfully!" << RESET << std::endl;
 			print_full_status(server);
-			// wl_event_loop_add_idle(server->event_loop(), [](void * data) {
-			//     launch_program("kitty", {});
-			// }, nullptr);
+			wl_event_loop_add_idle(server->event_loop(), [](void * data) {
+				launch_program("weston-simple-shm", {});
+			}, nullptr);
 		})
 		.on_stop([](auto server) {
 			std::cout

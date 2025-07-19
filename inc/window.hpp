@@ -28,17 +28,23 @@ private:
 
 	// struct ::wlr_foreign_toplevel_handle_v1 * _foreign_toplevel;
 
-	bool _is_ready;
 	Geo _x, _y, _width, _height;
 	bool _mapped, _minimized, _maximized, _fullscreened;
+	bool _ready;
+	bool _dirty;
 	WorkspacesHistory * _workspaces_history;
 	void * _data;
 
 	std::list<Handler> _on_create;
+	std::list<Handler> _on_set_title;
+	std::list<Handler> _on_set_app_id;
 	std::list<Handler> _on_destroy;
 
+	struct ::wl_listener _set_title_listener;
+	struct ::wl_listener _set_app_id_listener;
 	struct ::wl_listener _map_listener;
 	struct ::wl_listener _unmap_listener;
+	struct ::wl_listener _configure_listener;
 	struct ::wl_listener _commit_listener;
 	struct ::wl_listener _destroy_listener;
 
@@ -71,7 +77,6 @@ public:
 	[[nodiscard]] struct wlr_xwayland_surface * xwayland_surface() const;  // isnt real wlr_xwayland_surface
 	[[nodiscard]] const char * title() const;
 	[[nodiscard]] const char * app_id() const;
-	[[nodiscard]] bool is_ready() const;
 	[[nodiscard]] Geo x() const;
 	[[nodiscard]] Geo y() const;
 	[[nodiscard]] Geo width() const;
@@ -80,22 +85,32 @@ public:
 	[[nodiscard]] bool minimized() const;
 	[[nodiscard]] bool maximized() const;
 	[[nodiscard]] bool fullscreened() const;
+	[[nodiscard]] bool ready() const;
+	[[nodiscard]] bool dirty() const;
 	[[nodiscard]] WorkspacesHistory * workspaces_history() const;
 	[[nodiscard]] void * data() const;
 	// [[nodiscard]] struct ::wlr_foreign_toplevel_handle_v1 * foreign_toplevel() const;
 
+	Window & drawn();
 	Window & set_workspace(Workspace * workspace);
 	Window & set_title(const char * title);
-	Window & set_app_id(const char * app_id);;
+	Window & set_app_id(const char * app_id);
 	Window & set_data(void * data);
 	Window & set_xdg_surface(struct ::wlr_xdg_surface * xdg_surface);
 	Window & set_xwayland_surface(struct wlr_xwayland_surface * xwayland_surface);  // isnt real wlr_xwayland_surface
 
+	Window & on_set_title(const Handler & handler);
+	Window & on_set_app_id(const Handler & handler);
 	Window & on_destroy(const Handler & handler);
 
 private:
+	void _setup_xdg();
+
+	static void _handle_set_title(struct ::wl_listener * listener, void * data);
+	static void _handle_set_app_id(struct ::wl_listener * listener, void * data);
 	static void _handle_map(struct ::wl_listener * listener, void * data);
 	static void _handle_unmap(struct ::wl_listener * listener, void * data);
+	static void _handle_configure(struct ::wl_listener * listener, void * data);
 	static void _handle_commit(struct ::wl_listener * listener, void * data);
 	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };

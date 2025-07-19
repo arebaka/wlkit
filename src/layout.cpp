@@ -43,6 +43,6 @@ Layout & Layout::on_destroy(const Handler & handler) {
 }
 
 void Layout::_handle_destroy(struct wl_listener * listener, void * data) {
-	Layout * it = wl_container_of(listener, it, _destroy_listener);
-	delete it;
+	Layout * layout = wl_container_of(listener, layout, _destroy_listener);
+	delete layout;
 }

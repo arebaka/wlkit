@@ -10,9 +10,12 @@
 
 extern "C" {
 #include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 }
 
 using namespace wlkit;
+
+#include <iostream>
 
 Server::Server(Seat * seat, const Handler & callback):
 _seat(seat), _running(false), _data(nullptr) {
@@ -23,10 +26,10 @@ _seat(seat), _running(false), _data(nullptr) {
 	_inside_wl = getenv("WAYLAND_DISPLAY") ||
 		(getenv("XDG_SESSION_TYPE") && strcmp(getenv("XDG_SESSION_TYPE"), "wayland") == 0);
 	if (_inside_wl) {
-		setenv("WLR_BACKENDS", "wayland", 1);
+		setenv("WLR_BACKENDS", "wayland", true);
 	} else {
-		setenv("WLR_BACKENDS", "drm,libinput", 1);
-		setenv("LIBSEAT_BACKEND", "logind", 1);
+		setenv("WLR_BACKENDS", "drm,libinput", true);
+		setenv("LIBSEAT_BACKEND", "logind", true);
 	}
 
 	_display = wl_display_create();
@@ -35,10 +38,17 @@ _seat(seat), _running(false), _data(nullptr) {
 	}
 
 	_event_loop = wl_display_get_event_loop(_display);
-
-	_session = wlr_session_create(_event_loop);
-	if (!_session) {
+	if (!_event_loop) {
 		// TODO error
+	}
+
+	if (_inside_wl) {
+		_session = wlr_session_create(_event_loop);
+		if (!_session) {
+			// TODO error
+		}
+	} else {
+		_session = nullptr;
 	}
 
 	_backend = wlr_backend_autocreate(_event_loop, &_session);
@@ -69,23 +79,69 @@ _seat(seat), _running(false), _data(nullptr) {
 
 	_root = new Root(this, nullptr, 24, nullptr);  // TODO from config
 
+	_data_device_manager = wlr_data_device_manager_create(_display);
+
+	_output_layout = wlr_output_layout_create(_display);
+	_output_manager = wlr_xdg_output_manager_v1_create(_display, _output_layout);
+	_output_layout_change_listener.notify = _handle_output_layout_change;
+	wl_signal_add(&_output_layout->events.change, &_output_layout_change_listener);
+
+	_new_output_listener.notify = _handle_new_output;
+	wl_signal_add(&_backend->events.new_output, &_new_output_listener);
+	_new_input_listener.notify = _handle_new_input;
+	wl_signal_add(&_backend->events.new_input, &_new_input_listener);
+
 	_xdg_shell = wlr_xdg_shell_create(_display, 5);
+	_new_xdg_shell_surface_listener.notify = _handle_new_xdg_shell_surface;
+	wl_signal_add(&_xdg_shell->events.new_surface, &_new_xdg_shell_surface_listener);
 	_new_xdg_shell_toplevel_listener.notify = _handle_new_xdg_shell_toplevel;
 	wl_signal_add(&_xdg_shell->events.new_toplevel, &_new_xdg_shell_toplevel_listener);
+	_new_xdg_shell_popup_listener.notify = _handle_new_xdg_shell_popup;
+	wl_signal_add(&_xdg_shell->events.new_popup, &_new_xdg_shell_popup_listener);
+
+	_layer_shell = wlr_layer_shell_v1_create(_display, 4);
+	_new_layer_shell_surface_listener.notify = _handle_new_layer_shell_surface;
+	wl_signal_add(&_layer_shell->events.new_surface, &_new_layer_shell_surface_listener);
+
+	// _xwayland = wlr_xwayland_create(_display, _compositor, true);
+	// _new_xwayland_surface_listener.notify = _handle_new_xwayland_surface;
+	// wl_signal_add(&_xwayland->events.new_surface, &_new_xwayland_surface_listener);
+	// setenv("DISPLAY", _xwayland->display_name, true);
+
+	_gamma_control_manager = wlr_gamma_control_manager_v1_create(_display);
+	_screencopy_manager = wlr_screencopy_manager_v1_create(_display);
+
+	_virtual_keyboard_manager = wlr_virtual_keyboard_manager_v1_create(_display);
+	_new_virtual_keyboard_listener.notify = _handle_new_virtual_keyboard;
+	wl_signal_add(&_virtual_keyboard_manager->events.new_virtual_keyboard, &_new_virtual_keyboard_listener);
+
+	_virtual_pointer_manager = wlr_virtual_pointer_manager_v1_create(_display);
+	_new_virtual_pointer_listener.notify = _handle_new_virtual_pointer;
+	wl_signal_add(&_virtual_pointer_manager->events.new_virtual_pointer, &_new_virtual_pointer_listener);
+
+	_decoration_manager = wlr_server_decoration_manager_create(_display);
+	wlr_server_decoration_manager_set_default_mode(_decoration_manager, WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+	_new_decoration_listener.notify = _handle_new_decoration;
+	wl_signal_add(&_decoration_manager->events.new_decoration, &_new_decoration_listener);
+
+	_xdg_decoration_manager = wlr_xdg_decoration_manager_v1_create(_display);
+	_new_xdg_toplevel_decoration_listener.notify = _handle_new_xdg_toplevel_decoration;
+	wl_signal_add(&_xdg_decoration_manager->events.new_toplevel_decoration, &_new_xdg_toplevel_decoration_listener);
+
+	// TODO setup selection
 
 	// _foreign_toplevel_manager_v1 = wlr_foreign_toplevel_manager_v1_create(_display);
-	_data_device_manager = wlr_data_device_manager_create(_display);
 	// _idle_notifier_v1 = wlr_idle_notifier_v1_create(_display);
 
 	if (wlr_renderer_get_texture_formats(_renderer, WLR_BUFFER_CAP_DMABUF) != nullptr) {
 		_linux_dmabuf_v1 = wlr_linux_dmabuf_v1_create_with_renderer(_display, 4, _renderer);
 	}
-	// if (wlr_renderer_get_drm_fd(_renderer) >= 0 &&
-	// 	_renderer->features.timeline &&
-	//    _backend->features.timeline
-	// ) {
-	// 	wlr_linux_drm_syncobj_manager_v1_create(_display, 1, wlr_renderer_get_drm_fd(_renderer));
-	// }
+	if (wlr_renderer_get_drm_fd(_renderer) >= 0 &&
+		_renderer->features.timeline &&
+		_backend->features.timeline
+	) {
+		wlr_linux_drm_syncobj_manager_v1_create(_display, 1, wlr_renderer_get_drm_fd(_renderer));
+	}
 
 	// _xdg_activation_v1 = wlr_xdg_activation_v1_create(_display);
 	// _xdg_activation_v1_destroy_listener.notify = _handle_xdg_activation_v1_destroy;
@@ -121,10 +177,6 @@ _seat(seat), _running(false), _data(nullptr) {
 	// _new_xdg_decoration_listener.notify = _handle_new_xdg_decoration;
 	// wl_signal_add(&_xdg_decoration_manager_v1->events.new_toplevel_decoration, &_new_xdg_decoration_listener);
 
-	_new_output_listener.notify = _handle_new_output;
-	wl_signal_add(&_backend->events.new_output, &_new_output_listener);
-	_new_input_listener.notify = _handle_new_input;
-	wl_signal_add(&_backend->events.new_input, &_new_input_listener);
 	// _new_xdg_surface_listener.notify = _handle_new_xdg_surface;
 	// wl_signal_add(&_xdg_shell->events.new_surface, &_new_xdg_surface_listener);
 
@@ -138,6 +190,8 @@ Server::~Server() {
 	for (auto & cb : _on_destroy) {
 		cb(this);
 	}
+
+	// TODO cleanup
 }
 
 Workspace * Server::get_workspace_by_id(Workspace::ID id) {
@@ -312,6 +366,13 @@ Server & Server::on_stop(const Handler & handler) {
 	return *this;
 }
 
+Server & Server::on_output_layout_change(const OutputLayoutChangeHandler & handler) {
+	if (handler) {
+		_on_output_layout_change.push_back(std::move(handler));
+	}
+	return *this;
+}
+
 Server & Server::on_new_output(const NewOutputHandler & handler) {
 	if (handler) {
 		_on_new_output.push_back(std::move(handler));
@@ -326,16 +387,46 @@ Server & Server::on_new_input(const NewInputHandler & handler) {
 	return *this;
 }
 
-Server & Server::on_new_xdg_shell_toplevel(const NewXDGShellToplevelHandler & handler) {
+Server & Server::on_new_xdg_shell_surface(const NewXDGShellSurfaceHandler & handler) {
+	if (handler) {
+		_on_new_xdg_shell_surface.push_back(std::move(handler));
+	}
+	return *this;
+}
+
+Server & Server::on_new_xdg_shell_toplevel(const NewXDGShellSurfaceHandler & handler) {
 	if (handler) {
 		_on_new_xdg_shell_toplevel.push_back(std::move(handler));
 	}
 	return *this;
 }
 
+Server & Server::on_new_xdg_shell_popup(const NewXDGShellSurfaceHandler & handler) {
+	if (handler) {
+		_on_new_xdg_shell_popup.push_back(std::move(handler));
+	}
+	return *this;
+}
+
 void Server::_handle_destroy(struct wl_listener * listener, void * data) {
-	Server * it = wl_container_of(listener, it, _destroy_listener);
-	delete it;
+	Server * server = wl_container_of(listener, server, _destroy_listener);
+	delete server;
+}
+
+void Server::_handle_output_layout_change(struct wl_listener * listener, void * data) {
+	Server * server = wl_container_of(listener, server, _output_layout_change_listener);
+	auto * layout = static_cast<struct wlr_output_layout*>(data);
+
+	for (auto & output : server->_outputs) {
+		wlr_box box;
+		wlr_output_layout_get_box(server->_output_layout, output->wlr_output(), &box);
+		output->set_x(box.x);
+		output->set_y(box.y);
+	}
+
+	for (auto & cb : server->_on_output_layout_change) {
+		cb(server, layout);
+	}
 }
 
 void Server::_handle_new_output(struct wl_listener * listener, void * data) {
@@ -354,9 +445,6 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 	struct Server * server = wl_container_of(listener, server, _new_input_listener);
 	auto device = static_cast<struct wlr_input_device*>(data);
 
-	wlr_seat_set_capabilities(server->seat()->wlr_seat(),
-		WL_SEAT_CAPABILITY_KEYBOARD | WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_TOUCH);
-
 	Input * input;
 
 	switch (device->type) {
@@ -367,12 +455,16 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 		input = new Pointer(server, device, nullptr);
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
+		return;
 		break;
 	case WLR_INPUT_DEVICE_TABLET:
+		return;
 		break;
 	case WLR_INPUT_DEVICE_TABLET_PAD:
+		return;
 		break;
 	case WLR_INPUT_DEVICE_SWITCH:
+		return;
 		break;
 	default:
 		return;
@@ -385,8 +477,26 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 	}
 }
 
+void Server::_handle_new_xdg_shell_surface(struct wl_listener * listener, void * data) {
+	Server * server = wl_container_of(listener, server, _new_xdg_shell_surface_listener);
+	auto xdg_surface = static_cast<struct wlr_xdg_surface*>(data);
+	auto output = server->preferred_output();
+	auto workspace = output->current_workspace();
+
+	if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL || xdg_surface->role == WLR_XDG_SURFACE_ROLE_POPUP) {
+		return;
+	}
+
+	wlr_xdg_surface_ping(xdg_surface);
+
+	auto window = new Window(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
+	for (auto & cb : server->_on_new_xdg_shell_surface) {
+		cb(window, xdg_surface, output);
+	}
+}
+
 void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void * data) {
-	Server * server = wl_container_of(listener, server, _new_xdg_surface_listener);
+	Server * server = wl_container_of(listener, server, _new_xdg_shell_toplevel_listener);
 	auto xdg_toplevel = static_cast<struct wlr_xdg_toplevel*>(data);
 	auto xdg_surface = xdg_toplevel->base;
 	auto output = server->preferred_output();
@@ -394,9 +504,9 @@ void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void 
 
 	wlr_xdg_surface_ping(xdg_surface);
 
-	auto window = std::make_unique<Window>(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
+	auto window = new Window(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
 	for (auto & cb : server->_on_new_xdg_shell_toplevel) {
-		cb(window.get(), xdg_surface, output);
+		cb(window, xdg_surface, output);
 	}
 
 	// if (server->portal_manager) {
@@ -404,6 +514,49 @@ void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void 
 	// 		server->portal_manager->foreign_toplevel_manager_v1);
 	// }
 }
+
+void Server::_handle_new_xdg_shell_popup(struct wl_listener * listener, void * data) {
+	Server * server = wl_container_of(listener, server, _new_xdg_shell_surface_listener);
+	auto xdg_popup = static_cast<struct wlr_xdg_popup*>(data);
+	auto xdg_surface = xdg_popup->base;
+	auto output = server->preferred_output();
+	auto workspace = output->current_workspace();
+
+	wlr_xdg_surface_ping(xdg_surface);
+
+	auto window = new Window(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
+	for (auto & cb : server->_on_new_xdg_shell_popup) {
+		cb(window, xdg_surface, output);
+	}
+}
+
+void Server::_handle_new_layer_shell_surface(struct wl_listener * listener, void * data) {
+
+}
+
+void Server::_handle_new_xwayland_surface(struct ::wl_listener * listener, void * data) {
+
+}
+
+void Server::_handle_new_virtual_keyboard(struct ::wl_listener * listener, void * data) {
+
+}
+
+void Server::_handle_new_virtual_pointer(struct ::wl_listener * listener, void * data) {
+
+}
+
+void Server::_handle_new_decoration(struct ::wl_listener * listener, void * data) {
+
+}
+
+void Server::_handle_new_xdg_toplevel_decoration(struct ::wl_listener * listener, void * data) {
+
+}
+
+
+
+
 
 void Server::_handle_xdg_activation_v1_destroy(struct wl_listener * listener, void * data) {};
 void Server::_handle_xdg_activation_v1_request_activate(struct wl_listener * listener, void * data) {};
