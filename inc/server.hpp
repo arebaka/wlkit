@@ -15,34 +15,30 @@ extern "C" {
 // #define class class_
 // #include <wlr/xwayland.h>
 // #undef class
+#include <wlr/types/wlr_idle_notify_v1.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
-
-
-
-// #include <wlr/types/wlr_idle_notify_v1.h>
-// #include <wlr/types/wlr_linux_dmabuf_v1.h>
-// #include <wlr/types/wlr_linux_dmabuf_v1.h>
-// #include <wlr/types/wlr_xdg_activation_v1.h>
-
-// #include <wlr/types/wlr_data_control_v1.h>
-// #include <wlr/types/wlr_drm_lease_v1.h>
-// #include <wlr/types/wlr_ext_data_control_v1.h>
-// #include <wlr/types/wlr_ext_image_capture_source_v1.h>
-// #include <wlr/types/wlr_idle_inhibit_v1.h>
-// #define delete delete_
-// #include <wlr/types/wlr_input_method_v2.h>
-// #undef delete
-// #include <wlr/types/wlr_relative_pointer_v1.h>
-// #include <wlr/types/wlr_security_context_v1.h>
-// #include <wlr/types/wlr_server_decoration.h>
-// #include <wlr/types/wlr_session_lock_v1.h>
-// #include <wlr/types/wlr_text_input_v3.h>
-// #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_linux_dmabuf_v1.h>
+#include <wlr/types/wlr_xdg_activation_v1.h>
+#include <wlr/types/wlr_data_control_v1.h>
+#include <wlr/types/wlr_drm_lease_v1.h>
+#include <wlr/types/wlr_ext_data_control_v1.h>
+#define delete delete_
+#include <wlr/types/wlr_input_method_v2.h>
+#undef delete
+#include <wlr/types/wlr_text_input_v3.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
+#include <wlr/types/wlr_security_context_v1.h>
+#include <wlr/types/wlr_session_lock_v1.h>
+#include <wlr/types/wlr_idle_inhibit_v1.h>
+#include <wlr/types/wlr_server_decoration.h>
+#include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_ext_image_capture_source_v1.h>
 }
 
 #include "common.hpp"
@@ -101,40 +97,31 @@ private:
 	struct ::wlr_layer_shell_v1 * _layer_shell;
 	// struct ::wlr_xwayland * _xwayland;
 
+	struct ::wlr_idle_notifier_v1 * _idle_notifier;
+	struct ::wlr_foreign_toplevel_manager_v1 * _foreign_toplevel_manager;
 	struct ::wlr_gamma_control_manager_v1 * _gamma_control_manager;
 	struct ::wlr_screencopy_manager_v1 * _screencopy_manager;
 	struct ::wlr_virtual_keyboard_manager_v1 * _virtual_keyboard_manager;
 	struct ::wlr_virtual_pointer_manager_v1 * _virtual_pointer_manager;
 	struct ::wlr_server_decoration_manager * _decoration_manager;
 	struct ::wlr_xdg_decoration_manager_v1 * _xdg_decoration_manager;
-
-
-
-
-
-
-	// struct wlr_foreign_toplevel_manager_v1 * _foreign_toplevel_manager_v1;
-	// struct wlr_idle_notifier_v1 * _idle_notifier_v1;
-	struct ::wlr_linux_dmabuf_v1 * _linux_dmabuf_v1;
-	// struct wlr_xdg_activation_v1 * _xdg_activation_v1;
-
-	// // struct wlr_content_type_manager_v1 * content_type_manager_v1;
-	// struct wlr_data_control_manager_v1 * _wlr_data_control_manager_v1;
-	// struct wlr_drm_lease_v1_manager * _drm_lease_v1_manager;
-	// struct wlr_ext_data_control_manager_v1 * _ext_data_control_manager_v1;
-	// struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1 * _ext_foreign_toplevel_image_capture_source_manager_v1;
-	// // struct wlr_ext_image_copy_capture_manager_v1 * ext_image_copy_capture_manager_v1;
-	// struct wlr_idle_inhibit_manager_v1 * _idle_inhibit_manager_v1;
-	// struct wlr_input_method_manager_v2 * _input_method_manager_v2;
-	// // struct wlr_output_power_manager_v1 * output_power_manager_v1;
-	// struct wlr_relative_pointer_manager_v1 * _relative_pointer_manager_v1;
-	// struct wlr_security_context_manager_v1 * _security_context_manager_v1;
-	// struct wlr_server_decoration_manager * _server_decoration_manager;
-	// struct wlr_session_lock_manager_v1 * _session_lock_manager_v1;
-	// // struct wlr_tablet_manager_v2 * tablet_manager_v2;
-	// // struct wlr_tearing_control_manager_v1 * tearing_control_manager_v1;
-	// struct wlr_text_input_manager_v3 * _text_input_manager_v3;
-	// struct wlr_xdg_decoration_manager_v1 * _xdg_decoration_manager_v1;
+	struct ::wlr_linux_dmabuf_v1 * _linux_dmabuf;
+	struct ::wlr_xdg_activation_v1 * _xdg_activation;
+	struct ::wlr_data_control_manager_v1 * _wlr_data_control_manager;
+	struct ::wlr_drm_lease_v1_manager * _drm_lease_manager;
+	struct ::wlr_ext_data_control_manager_v1 * _ext_data_control_manager;
+	struct ::wlr_input_method_manager_v2 * _input_method_manager;
+	struct ::wlr_text_input_manager_v3 * _text_input_manager;
+	struct ::wlr_relative_pointer_manager_v1 * _relative_pointer_manager;
+	struct ::wlr_security_context_manager_v1 * _security_context_manager;
+	struct ::wlr_session_lock_manager_v1 * _session_lock_manager;
+	struct ::wlr_idle_inhibit_manager_v1 * _idle_inhibit_manager;
+	struct ::wlr_ext_output_image_capture_source_manager_v1 * _ext_output_image_capture_source_manager;
+	// struct ::wlr_content_type_manager_v1 * content_type_manager;
+	// struct wlr_ext_image_copy_capture_manager_v1 * ext_image_copy_capture_manager_v1;
+	// struct wlr_output_power_manager_v1 * output_power_manager_v1;
+	// struct wlr_tablet_manager_v2 * tablet_manager_v2;
+	// struct wlr_tearing_control_manager_v1 * tearing_control_manager_v1;
 
 	std::list<Handler> _on_create;
 	std::list<Handler> _on_destroy;
@@ -162,13 +149,12 @@ private:
 	struct ::wl_listener _new_xdg_toplevel_decoration_listener;
 
 	struct ::wl_listener _renderer_lost_listener;
-	// struct ::wl_listener _xdg_activation_v1_destroy_listener;
-	// struct ::wl_listener _xdg_activation_v1_request_activate_listener;
-	// struct ::wl_listener _xdg_activation_v1_new_token_listener;
-	// struct ::wl_listener _xdg_shell_toplevel_listener;
-	// struct ::wl_listener _new_foreign_toplevel_capture_request_listener;
+	struct ::wl_listener _xdg_activation_destroy_listener;
+	struct ::wl_listener _xdg_activation_request_activate_listener;
+	struct ::wl_listener _xdg_activation_new_token_listener;
 	// struct ::wl_listener _new_server_decoration_listener;
 	// struct ::wl_listener _new_xdg_decoration_listener;
+	// struct ::wl_listener _new_output_capture_request_listener;
 
 public:
 	Server(
@@ -239,9 +225,9 @@ private:
 	static void _handle_new_decoration(struct ::wl_listener * listener, void * data);
 	static void _handle_new_xdg_toplevel_decoration(struct ::wl_listener * listener, void * data);
 
-	static void _handle_xdg_activation_v1_destroy(struct ::wl_listener * listener, void * data);
-	static void _handle_xdg_activation_v1_request_activate(struct ::wl_listener * listener, void * data);
-	static void _handle_xdg_activation_v1_new_token(struct ::wl_listener * listener, void * data);
+	static void _handle_xdg_activation_destroy(struct ::wl_listener * listener, void * data);
+	static void _handle_xdg_activation_request_activate(struct ::wl_listener * listener, void * data);
+	static void _handle_xdg_activation_new_token(struct ::wl_listener * listener, void * data);
 	static void _handle_new_server_decoration(struct ::wl_listener * listener, void * data);
 	static void _handle_new_xdg_decoration(struct ::wl_listener * listener, void * data);
 };

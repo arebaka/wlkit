@@ -15,8 +15,6 @@ extern "C" {
 
 using namespace wlkit;
 
-#include <iostream>
-
 Server::Server(Seat * seat, const Handler & callback):
 _seat(seat), _running(false), _data(nullptr) {
 	if (!_seat) {
@@ -108,6 +106,8 @@ _seat(seat), _running(false), _data(nullptr) {
 	// wl_signal_add(&_xwayland->events.new_surface, &_new_xwayland_surface_listener);
 	// setenv("DISPLAY", _xwayland->display_name, true);
 
+	_idle_notifier = wlr_idle_notifier_v1_create(_display);
+	_foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(_display);
 	_gamma_control_manager = wlr_gamma_control_manager_v1_create(_display);
 	_screencopy_manager = wlr_screencopy_manager_v1_create(_display);
 
@@ -130,11 +130,8 @@ _seat(seat), _running(false), _data(nullptr) {
 
 	// TODO setup selection
 
-	// _foreign_toplevel_manager_v1 = wlr_foreign_toplevel_manager_v1_create(_display);
-	// _idle_notifier_v1 = wlr_idle_notifier_v1_create(_display);
-
 	if (wlr_renderer_get_texture_formats(_renderer, WLR_BUFFER_CAP_DMABUF) != nullptr) {
-		_linux_dmabuf_v1 = wlr_linux_dmabuf_v1_create_with_renderer(_display, 4, _renderer);
+		_linux_dmabuf = wlr_linux_dmabuf_v1_create_with_renderer(_display, 4, _renderer);
 	}
 	if (wlr_renderer_get_drm_fd(_renderer) >= 0 &&
 		_renderer->features.timeline &&
@@ -143,42 +140,31 @@ _seat(seat), _running(false), _data(nullptr) {
 		wlr_linux_drm_syncobj_manager_v1_create(_display, 1, wlr_renderer_get_drm_fd(_renderer));
 	}
 
-	// _xdg_activation_v1 = wlr_xdg_activation_v1_create(_display);
-	// _xdg_activation_v1_destroy_listener.notify = _handle_xdg_activation_v1_destroy;
-	// wl_signal_add(&_xdg_activation_v1->events.destroy, &_xdg_activation_v1_destroy_listener);
-	// _xdg_activation_v1_request_activate_listener.notify = _handle_xdg_activation_v1_request_activate;
-	// wl_signal_add(&_xdg_activation_v1->events.request_activate, &_xdg_activation_v1_request_activate_listener);
-	// _xdg_activation_v1_new_token_listener.notify = _handle_xdg_activation_v1_new_token;
-	// wl_signal_add(&_xdg_activation_v1->events.new_token, &_xdg_activation_v1_new_token_listener);
+	_xdg_activation = wlr_xdg_activation_v1_create(_display);
+	_xdg_activation_destroy_listener.notify = _handle_xdg_activation_destroy;
+	wl_signal_add(&_xdg_activation->events.destroy, &_xdg_activation_destroy_listener);
+	_xdg_activation_request_activate_listener.notify = _handle_xdg_activation_request_activate;
+	wl_signal_add(&_xdg_activation->events.request_activate, &_xdg_activation_request_activate_listener);
+	_xdg_activation_new_token_listener.notify = _handle_xdg_activation_new_token;
+	wl_signal_add(&_xdg_activation->events.new_token, &_xdg_activation_new_token_listener);
 
-	// _wlr_data_control_manager_v1 = wlr_data_control_manager_v1_create(_display);
-	// _drm_lease_v1_manager = wlr_drm_lease_v1_manager_create(_display, _backend);
-	// _ext_data_control_manager_v1 = wlr_ext_data_control_manager_v1_create(_display, 1);
-	// _input_method_manager_v2 = wlr_input_method_manager_v2_create(_display);
-	// _text_input_manager_v3 = wlr_text_input_manager_v3_create(_display);
-	// _relative_pointer_manager_v1 = wlr_relative_pointer_manager_v1_create(_display);
-	// _security_context_manager_v1 = wlr_security_context_manager_v1_create(_display);
-	// _session_lock_manager_v1 = wlr_session_lock_manager_v1_create(_display);
-	// _text_input_manager_v3 = wlr_text_input_manager_v3_create(_display);
+	_wlr_data_control_manager = wlr_data_control_manager_v1_create(_display);
+	_drm_lease_manager = wlr_drm_lease_v1_manager_create(_display, _backend);
+	_ext_data_control_manager = wlr_ext_data_control_manager_v1_create(_display, 1);
+	_input_method_manager = wlr_input_method_manager_v2_create(_display);
+	_text_input_manager = wlr_text_input_manager_v3_create(_display);
+	_relative_pointer_manager = wlr_relative_pointer_manager_v1_create(_display);
+	_security_context_manager = wlr_security_context_manager_v1_create(_display);
+	_session_lock_manager = wlr_session_lock_manager_v1_create(_display);
 
-	// _idle_inhibit_manager_v1 = wlr_idle_inhibit_v1_create(_display);
-	// // wl_signal_add(&_idle_inhibit_manager_v1->wlr_manager->events.new_inhibitor, &_idle_inhibit_manager_v1->new_idle_inhibitor_v1);
-	// // _idle_inhibit_manager_v1->new_idle_inhibitor_v1.notify = handle_new_idle_inhibitor_v1;
-	// // wl_signal_add(&_idle_inhibit_manager_v1->wlr_manager->events.destroy, &_idle_inhibit_manager_v1->manager_destroy);
-	// // _idle_inhibit_manager_v1->manager_destroy.notify = handle_inle_inhibit_manager_destroy;
-	// // wl_list_init(&_idle_inhibit_manager_v1->inhibitors);
+	_idle_inhibit_manager = wlr_idle_inhibit_v1_create(_display);
+	wl_list_init(&_idle_inhibit_manager->inhibitors);
+	// _idle_inhibit_manager->new_idle_inhibitor_v1.notify = _handle_new_idle_inhibitor_v1;
+	// wl_signal_add(&_idle_inhibit_manager_v1->wlr_manager->events.new_inhibitor, &_idle_inhibit_manager_v1->new_idle_inhibitor_v1);
+	// _idle_inhibit_manager->manager_destroy.notify = _handle_idle_inhibit_manager_destroy;
+	// wl_signal_add(&_idle_inhibit_manager_v1->wlr_manager->events.destroy, &_idle_inhibit_manager_v1->manager_destroy);
 
-	// _server_decoration_manager = wlr_server_decoration_manager_create(_display);
-	// wlr_server_decoration_manager_set_default_mode(_server_decoration_manager, WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
-	// _new_server_decoration_listener.notify = _handle_new_server_decoration;
-	// wl_signal_add(&_server_decoration_manager->events.new_decoration, &_new_server_decoration_listener);
-
-	// _xdg_decoration_manager_v1 = wlr_xdg_decoration_manager_v1_create(_display);
-	// _new_xdg_decoration_listener.notify = _handle_new_xdg_decoration;
-	// wl_signal_add(&_xdg_decoration_manager_v1->events.new_toplevel_decoration, &_new_xdg_decoration_listener);
-
-	// _new_xdg_surface_listener.notify = _handle_new_xdg_surface;
-	// wl_signal_add(&_xdg_shell->events.new_surface, &_new_xdg_surface_listener);
+	_ext_output_image_capture_source_manager = wlr_ext_output_image_capture_source_manager_v1_create(_display, 1);
 
 	if (callback) {
 		_on_create.push_back(std::move(callback));
@@ -558,8 +544,8 @@ void Server::_handle_new_xdg_toplevel_decoration(struct ::wl_listener * listener
 
 
 
-void Server::_handle_xdg_activation_v1_destroy(struct wl_listener * listener, void * data) {};
-void Server::_handle_xdg_activation_v1_request_activate(struct wl_listener * listener, void * data) {};
-void Server::_handle_xdg_activation_v1_new_token(struct wl_listener * listener, void * data) {};
+void Server::_handle_xdg_activation_destroy(struct wl_listener * listener, void * data) {};
+void Server::_handle_xdg_activation_request_activate(struct wl_listener * listener, void * data) {};
+void Server::_handle_xdg_activation_new_token(struct wl_listener * listener, void * data) {};
 void Server::_handle_new_server_decoration(struct wl_listener * listener, void * data) {};
 void Server::_handle_new_xdg_decoration(struct wl_listener * listener, void * data) {};

@@ -224,9 +224,9 @@ void print_full_status(wlkit::Server * server) {
 	std::cout << std::endl;
 
 	print_output_info(server);
+	print_input_info(server);
 	print_workspace_info(server);
 	print_window_info(server);
-	print_input_info(server);
 
 	print_separator();
 	std::cout << BOLD << "Status update complete!" << RESET << std::endl;
@@ -240,17 +240,6 @@ void setup_portal_env(const wlkit::Server * server) {
 
 void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
 	struct wlr_render_pass * pass = render->pass();
-
-	// 5. Добавим заливку (фон)
-	struct wlr_render_rect_options rect_opts = {
-		.box = {
-			.x = 0, .y = 0,
-			.width = output->width(),
-			.height = output->height(),
-		},
-		.color = { 0.48828125f, 0.5f, 0.71875f, 1.0f },
-	};
-	wlr_render_pass_add_rect(pass, &rect_opts);
 
 	// Получаем время для анимации
 	time_t now = time(nullptr);
@@ -433,20 +422,19 @@ void ai_test_draw_frame(wlkit::Output * output, struct wlr_output * wlr_output, 
 }
 
 void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output, wlkit::Render * render) {
-	// Получаем render_pass
-	struct wlr_render_pass *pass = render->pass();
+	auto pass = render->pass();
 
 	// ––––––––––––––––––––––––––––––––––––––––––
 	// 2) Панель воркспейсов
 	// ––––––––––––––––––––––––––––––––––––––––––
 	auto server = output->server();
 	auto workspaces = server->workspaces();
-	size_t ws_count = workspaces.size();
+	auto ws_count = workspaces.size();
 	const int tab_h = 30;
 	int tab_w = output->width() / (ws_count ? ws_count : 1);
 
 	size_t idx = 0;
-	for (auto ws : workspaces) {
+	for (auto & ws : workspaces) {
 		bool current = ws == output->current_workspace();
 		struct wlr_render_rect_options ws_opts = {
 			.box = {
@@ -464,9 +452,8 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 	// ––––––––––––––––––––––––––––––––––––––––––
 	// 3) Окна на текущем воркспейсе
 	// ––––––––––––––––––––––––––––––––––––––––––
-	for (auto win : output->current_workspace()->windows()) {
+	for (auto & win : output->current_workspace()->windows()) {
 		if (!win->xdg_surface()) {
-			// получаем геометрию окна
 			int x = win->x();
 			int y = win->y() + tab_h;  // сдвиг вниз под панель
 			int w = win->width();
@@ -481,18 +468,18 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 			continue;
 		}
 
-		if (!win->ready() || !win->dirty()) {
+		if (!win->ready()) {
 			continue;
 		}
 
 		typedef struct {
-			wlkit::Window * window;
+			wlkit::Window * win;
 			wlkit::Output * output;
 			wlr_render_pass * pass;
 		} Context;
 
 		auto context = new Context{
-			.window = win,
+			.win = win,
 			.output = output,
 			.pass = pass,
 		};
@@ -500,7 +487,7 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 		auto xdg_surface = win->xdg_surface();
 		wlr_xdg_surface_for_each_surface(xdg_surface, [](auto surface, auto sx, auto sy, auto data) {
 			auto context = static_cast<Context*>(data);
-			auto win = context->window;
+			auto win = context->win;
 			auto output = context->output;
 			auto pass = context->pass;
 
@@ -588,7 +575,7 @@ void setup_keyboard(wlkit::Keyboard * keyboard) {
 			std::cout << "Key released: code=" << keycode << " name=" << name  << std::endl;
 		})
 		.on_mod([](auto keyboard, auto mods) {
-			std::cout << "Modifiers changed:"
+			std::cout << "Modifiers changed:" << std::hex
 				<< " depressed=" << mods->depressed
 				<< " latched="   << mods->latched
 				<< " locked="    << mods->locked
@@ -615,6 +602,15 @@ void setup_keyboard(wlkit::Keyboard * keyboard) {
 		.on_key_pressed([](auto keyboard, auto keycode) {
 			auto server = keyboard->server();
 			auto sym = xkb_state_key_get_one_sym(keyboard->wlr_keyboard()->xkb_state, keycode + 8);
+			if (sym == XKB_KEY_F1) {
+				print_output_info(server);
+			}
+			if (sym == XKB_KEY_F2) {
+				print_input_info(server);
+			}
+			if (sym == XKB_KEY_F3) {
+				print_workspace_info(server);
+			}
 			if (sym == XKB_KEY_F4) {
 				print_window_info(server);
 			}
@@ -714,16 +710,11 @@ int main() {
 			std::cout << GREEN << "✓ Server started successfully!" << RESET << std::endl;
 			print_full_status(server);
 			wl_event_loop_add_idle(server->event_loop(), [](void * data) {
-				launch_program("weston-simple-shm", {});
+				launch_program("kitty", {});
 			}, nullptr);
 		})
 		.on_stop([](auto server) {
-			std::cout
-				<< "outputs: " << server->outputs().size() << std::endl
-				<< "inputs: " << server->inputs().size() << std::endl
-				<< "workspaces: " << server->workspaces().size() << std::endl
-				<< "windows: " << server->windows().size() << std::endl
-				<< "Escape!" << std::endl;
+			std::cout << "Escape!" << std::endl;
 		})
 		.on_new_output([](auto output, auto wlr_output, auto server) {
 			output->server()->prefer_output(output);
@@ -736,7 +727,9 @@ int main() {
 		.on_new_output(setup_output)
 		.on_new_output(create_defaults)
 		.on_new_xdg_shell_toplevel([](auto window, auto xdg_surface, auto output) {
-			window->move(0 ,0).resize(500, 500);
+			window->on_map([](auto window) {
+				window->move(0, 0).resize(800, 500);
+			});
 		})
 		.start();
 }

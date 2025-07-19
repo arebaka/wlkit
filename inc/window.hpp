@@ -30,8 +30,7 @@ private:
 
 	Geo _x, _y, _width, _height;
 	bool _mapped, _minimized, _maximized, _fullscreened;
-	bool _ready;
-	bool _dirty;
+	bool _ready, _dirty, _resizing;
 	WorkspacesHistory * _workspaces_history;
 	void * _data;
 
@@ -39,12 +38,17 @@ private:
 	std::list<Handler> _on_set_title;
 	std::list<Handler> _on_set_app_id;
 	std::list<Handler> _on_destroy;
+	std::list<Handler> _on_move;
+	std::list<Handler> _on_resize;
+	std::list<Handler> _on_map;
+	std::list<Handler> _on_unmap;
 
 	struct ::wl_listener _set_title_listener;
 	struct ::wl_listener _set_app_id_listener;
 	struct ::wl_listener _map_listener;
 	struct ::wl_listener _unmap_listener;
 	struct ::wl_listener _configure_listener;
+	struct ::wl_listener _ack_configure_listener;
 	struct ::wl_listener _commit_listener;
 	struct ::wl_listener _destroy_listener;
 
@@ -102,15 +106,21 @@ public:
 	Window & on_set_title(const Handler & handler);
 	Window & on_set_app_id(const Handler & handler);
 	Window & on_destroy(const Handler & handler);
+	Window & on_move(const Handler & handler);
+	Window & on_resize(const Handler & handler);
+	Window & on_map(const Handler & handler);
+	Window & on_unmap(const Handler & handler);
 
 private:
 	void _setup_xdg();
+	void _configure_xdg();
 
 	static void _handle_set_title(struct ::wl_listener * listener, void * data);
 	static void _handle_set_app_id(struct ::wl_listener * listener, void * data);
 	static void _handle_map(struct ::wl_listener * listener, void * data);
 	static void _handle_unmap(struct ::wl_listener * listener, void * data);
 	static void _handle_configure(struct ::wl_listener * listener, void * data);
+	static void _handle_ack_configure(struct ::wl_listener * listener, void * data);
 	static void _handle_commit(struct ::wl_listener * listener, void * data);
 	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 };

@@ -18,7 +18,9 @@ Window::Window(Server * server, Workspace * workspace,
 	const char * title, const char * app_id, const Handler & callback):
 _server(server), _workspace(workspace),
 _xdg_surface(xdg_surface), _xwayland_surface(xwayland_surface),
-_mapped(false), _ready(false), _dirty(false), _data(nullptr) {
+_x(0.0), _y(0.0), _width(1.0), _height(1.0),
+_mapped(false), _minimized(false), _maximized(false), _fullscreened(false),
+_ready(false), _dirty(true), _resizing(false), _data(nullptr) {
 	_workspaces_history = new WorkspacesHistory();
 
 	if (_xdg_surface) {
@@ -27,29 +29,7 @@ _mapped(false), _ready(false), _dirty(false), _data(nullptr) {
 			_app_id = strdup(app_id ? app_id : _xdg_surface->toplevel->app_id ? _xdg_surface->toplevel->app_id : "");
 			_setup_xdg();
 		}
-		else {
-			auto * pending = new PendingXDG{
-				.listener = {},
-				.window = this,
-				.title = title,
-				.app_id = app_id,
-			};
-
-			pending->listener.notify = [](struct wl_listener * listener, void * data) {
-				struct PendingXDG * pending = wl_container_of(listener, pending, listener);
-				auto toplevel = static_cast<struct wlr_xdg_toplevel*>(data);
-				auto window = pending->window;
-
-				wl_list_remove(&pending->listener.link);
-
-				window->set_title(pending->title ? pending->title : toplevel->title ? toplevel->title : "");
-				window->set_app_id(pending->app_id ? pending->app_id : toplevel->app_id ? toplevel->app_id : "");
-				window->_setup_xdg();
-
-				delete pending;
-			};
-			wl_signal_add(&_xdg_surface->surface->events.map, &pending->listener);
-		}
+		// TODO popup
 	}
 	else {
 		_title = strdup(title ? title : "");
@@ -107,20 +87,30 @@ Window & Window::close() {
 Window & Window::move(Geo x, Geo y) {
 	_x = x;
 	_y = y;
+	_dirty = true;
 
-	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-		// wlr_xdg_toplevel_set_size(_xdg_surface->toplevel, _width, _height);
+	for (auto & cb : _on_move) {
+		cb(this);
 	}
 
 	return *this;
 }
 
 Window & Window::resize(Geo width, Geo height) {
+	if (width < 1 || height < 1) {
+		return *this;
+	}
+
 	_width = width;
 	_height = height;
+	_dirty = true;
 
 	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-		// wlr_xdg_toplevel_set_size(_xdg_surface->toplevel, _width, _height);
+		wlr_xdg_toplevel_set_size(_xdg_surface->toplevel, _width, _height);
+	}
+
+	for (auto & cb : _on_resize) {
+		cb(this);
 	}
 
 	return *this;
@@ -137,10 +127,15 @@ Window & Window::unmap() {
 }
 
 Window & Window::maximize() {
-	_maximized = true;
+	if (_maximized) {
+		return *this;
+	}
 
-	if (_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-		// wlr_xdg_toplevel_set_maximized(_xdg_surface->toplevel, _maximized);
+ 	_maximized = true;
+	_dirty = true;
+
+	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		wlr_xdg_toplevel_set_maximized(_xdg_surface->toplevel, _maximized);
 	}
 	// if (_foreign_toplevel) {
 		// wlr_foreign_toplevel_handle_v1_set_maximized(_foreign_toplevel, _maximized);
@@ -150,12 +145,27 @@ Window & Window::maximize() {
 }
 
 Window & Window::unmaximize() {
+	if (!_maximized) {
+		return *this;
+	}
+
 	_maximized = false;
+	_dirty = true;
+
+	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		wlr_xdg_toplevel_set_maximized(_xdg_surface->toplevel, _maximized);
+	}
+
 	return *this;
 }
 
 Window & Window::minimize() {
-	_minimized = !_minimized;
+	if (_minimized) {
+		return *this;
+	}
+
+	_minimized = true;
+	_dirty = true;
 
 	// if (_foreign_toplevel) {
 		// wlr_foreign_toplevel_handle_v1_set_minimized(_foreign_toplevel, _minimized);
@@ -165,15 +175,26 @@ Window & Window::minimize() {
 }
 
 Window & Window::unminimize() {
+	if (!_minimized) {
+		return *this;
+	}
+
 	_minimized = false;
+	_dirty = true;
+
 	return *this;
 }
 
 Window & Window::fullscreen() {
-	_fullscreened = true;
+	if (_fullscreened) {
+		return *this;
+	}
 
-	if (_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-		// wlr_xdg_toplevel_set_fullscreen(_xdg_surface->toplevel, _fullscreen);
+	_fullscreened = true;
+	_dirty = true;
+
+	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		wlr_xdg_toplevel_set_fullscreen(_xdg_surface->toplevel, _fullscreened);
 	}
 	// if (_foreign_toplevel) {
 		// wlr_foreign_toplevel_handle_v1_set_fullscreen(_foreign_toplevel, _fullscreen);
@@ -183,7 +204,17 @@ Window & Window::fullscreen() {
 }
 
 Window & Window::unfullscreen() {
+	if (!_fullscreened) {
+		return *this;
+	}
+
 	_fullscreened = false;
+	_dirty = true;
+
+	if (_xdg_surface && _xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		wlr_xdg_toplevel_set_fullscreen(_xdg_surface->toplevel, _fullscreened);
+	}
+
 	return *this;
 }
 
@@ -334,6 +365,34 @@ Window & Window::on_destroy(const Handler & handler) {
 	return *this;
 }
 
+Window & Window::on_move(const Handler & handler) {
+	if (handler) {
+		_on_move.push_back(std::move(handler));
+	}
+	return *this;
+}
+
+Window & Window::on_resize(const Handler & handler) {
+	if (handler) {
+		_on_resize.push_back(std::move(handler));
+	}
+	return *this;
+}
+
+Window & Window::on_map(const Handler & handler) {
+	if (handler) {
+		_on_map.push_back(std::move(handler));
+	}
+	return *this;
+}
+
+Window & Window::on_unmap(const Handler & handler) {
+	if (handler) {
+		_on_unmap.push_back(std::move(handler));
+	}
+	return *this;
+}
+
 void Window::_setup_xdg() {
 	bool failed = false;
 	auto scene = Node::alloc_scene_tree(_server->root()->staging(), &failed);
@@ -351,17 +410,37 @@ void Window::_setup_xdg() {
 
 	_set_title_listener.notify = _handle_set_title;
 	wl_signal_add(&_xdg_surface->toplevel->events.set_title, &_set_title_listener);
+	_set_app_id_listener.notify = _handle_set_app_id;
+	wl_signal_add(&_xdg_surface->toplevel->events.set_app_id, &_set_app_id_listener);
 	_map_listener.notify = _handle_map;
 	wl_signal_add(&_xdg_surface->surface->events.map, &_map_listener);
 	_unmap_listener.notify = _handle_unmap;
 	wl_signal_add(&_xdg_surface->surface->events.unmap, &_unmap_listener);
 	_configure_listener.notify = _handle_configure;
 	wl_signal_add(&_xdg_surface->events.configure, &_configure_listener);
+	_ack_configure_listener.notify = _handle_ack_configure;
+	wl_signal_add(&_xdg_surface->events.ack_configure, &_ack_configure_listener);
 	_commit_listener.notify = _handle_commit;
 	wl_signal_add(&_xdg_surface->surface->events.commit, &_commit_listener);
 	_destroy_listener.notify = _handle_destroy;
 	wl_signal_add(&_xdg_surface->surface->events.destroy, &_destroy_listener);
 	wl_signal_add(&_xdg_surface->events.destroy, &_destroy_listener);
+
+	_ready = false;
+}
+
+void Window::_configure_xdg() {
+	if (!_xdg_surface ||
+		!_xdg_surface->initialized ||
+		_xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL
+	) {
+		return;
+	}
+
+	wlr_xdg_toplevel_set_size(_xdg_surface->toplevel, _width, _height);
+	wlr_xdg_toplevel_set_maximized(_xdg_surface->toplevel, _maximized);
+	wlr_xdg_toplevel_set_fullscreen(_xdg_surface->toplevel, _fullscreened);
+	wlr_xdg_toplevel_set_activated(_xdg_surface->toplevel, true);
 
 	_ready = true;
 }
@@ -373,18 +452,25 @@ void Window::_handle_set_title(struct wl_listener * listener, void * data) {
 
 void Window::_handle_set_app_id(struct wl_listener * listener, void * data) {
 	Window * window = wl_container_of(listener, window, _set_app_id_listener);
-	auto * toplevel = static_cast<wlr_xdg_toplevel*>(data);
-	window->set_title(toplevel->app_id);
+	window->set_app_id(window->_xdg_surface->toplevel->app_id);
 }
 
 void Window::_handle_map(struct wl_listener * listener, void * data) {
 	Window * window = wl_container_of(listener, window, _map_listener);
 	window->_mapped = true;
+
+	for (auto & cb : window->_on_map) {
+		cb(window);
+	}
 }
 
 void Window::_handle_unmap(struct wl_listener * listener, void * data) {
 	Window * window = wl_container_of(listener, window, _unmap_listener);
 	window->_mapped = false;
+
+	for (auto & cb : window->_on_unmap) {
+		cb(window);
+	}
 }
 
 void Window::_handle_configure(struct wl_listener * listener, void * data) {
@@ -392,12 +478,31 @@ void Window::_handle_configure(struct wl_listener * listener, void * data) {
 	auto event = static_cast<struct wlr_xdg_surface_configure*>(data);
 	auto surface = window->_xdg_surface;
 
-	wlr_xdg_surface_configure(window->_xdg_surface, surface->configure_list);
+	if (window->_xdg_surface) {
+		if (surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+			if (event->toplevel_configure->width > 0 && event->toplevel_configure->height > 0) {
+				window->_width = event->toplevel_configure->width;
+				window->_height = event->toplevel_configure->height;
+			}
+
+			window->_maximized = event->toplevel_configure->maximized;
+			window->_fullscreened = event->toplevel_configure->fullscreen;
+			window->_resizing = event->toplevel_configure->resizing;
+		}
+	}
+}
+
+void Window::_handle_ack_configure(struct wl_listener * listener, void * data) {
+
 }
 
 void Window::_handle_commit(struct wl_listener * listener, void * data) {
 	Window * window = wl_container_of(listener, window, _commit_listener);
-	window->_dirty = true;
+	if (!window->_ready) {
+		if (window->_xdg_surface) {
+			window->_configure_xdg();
+		}
+	}
 }
 
 void Window::_handle_destroy(struct wl_listener * listener, void * data) {
