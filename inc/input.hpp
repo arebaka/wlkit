@@ -45,6 +45,8 @@ public:
 	virtual Keyboard * as_keyboard();
 	virtual bool is_pointer() const;
 	virtual Pointer * as_pointer();
+	virtual bool is_switch() const;
+	virtual Switch * as_switch();
 
 	[[nodiscard]] Server * server() const;
 	[[nodiscard]] Type type() const;

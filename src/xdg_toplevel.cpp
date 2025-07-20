@@ -21,22 +21,6 @@ XDGToplevel * XDGToplevel::as_xdg_toplevel() {
 	return this;
 }
 
-bool XDGToplevel::is_xdg_popup() const {
-	return false;
-}
-
-XDGPopup * XDGToplevel::as_xdg_popup() {
-	return nullptr;
-}
-
-bool XDGToplevel::is_xwayland() const {
-	return false;
-}
-
-XWayland * XDGToplevel::as_xwayland() {
-	return nullptr;
-}
-
 bool XDGToplevel::initialized() const {
 	return _xdg_surface->initialized;
 }

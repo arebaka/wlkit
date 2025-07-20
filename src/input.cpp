@@ -34,6 +34,14 @@ Pointer * Input::as_pointer() {
 	return nullptr;
 }
 
+bool Input::is_switch() const {
+	return false;
+}
+
+Switch * Input::as_switch() {
+	return nullptr;
+}
+
 Server * Input::server() const {
 	return _server;
 }

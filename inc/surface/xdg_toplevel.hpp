@@ -15,24 +15,20 @@ private:
 
 public:
 	XDGToplevel(struct ::wlr_xdg_surface * surface);
-	~XDGToplevel();
+	~XDGToplevel() override;
 
-	bool is_xdg_toplevel() const;
-	XDGToplevel * as_xdg_toplevel();
-	bool is_xdg_popup() const;
-	XDGPopup * as_xdg_popup();
-	bool is_xwayland() const;
-	XWayland * as_xwayland();
+	bool is_xdg_toplevel() const override;
+	XDGToplevel * as_xdg_toplevel() override;
 
-	bool initialized() const;
-	const char * title() const;
-	const char * app_id() const;
-	void ping();
-	void close();
-	Serial set_size(Geo width, Geo height);
-	Serial set_maximized(bool maximized);
-	Serial set_fullscreen(bool fullscreen);
-	Serial set_activated(bool activated);
+	bool initialized() const override;
+	const char * title() const override;
+	const char * app_id() const override;
+	void ping() override;
+	void close() override;
+	Serial set_size(Geo width, Geo height) override;
+	Serial set_maximized(bool maximized) override;
+	Serial set_fullscreen(bool fullscreen) override;
+	Serial set_activated(bool activated) override;
 
 	struct ::wlr_xdg_surface * xdg_surface();
 	struct ::wlr_xdg_toplevel * toplevel();

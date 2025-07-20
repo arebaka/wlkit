@@ -33,7 +33,7 @@ void setup_output(wlkit::Output * output, struct wlr_output * wlr_output, wlkit:
 }
 
 int main() {
-	auto seat = wlkit::Seat("seat0", nullptr);
+	auto seat = wlkit::Seat("seat0");
 	auto server = wlkit::Server(&seat, setup_portal_env);
 
 	server
@@ -41,10 +41,9 @@ int main() {
 			auto layout = new wlkit::Layout("tiling", nullptr);
 			auto workspace = new wlkit::Workspace(server, layout, 1, "default", nullptr);
 			auto window1 = new wlkit::Window(server, workspace,
-				/* xdg surface */ nullptr, /* xwayland surface */ nullptr,
-				"test window 1", "app name", nullptr);
+				/* surface */ nullptr, "test window 1", "app name");
 			auto window2 = new wlkit::Window(server, workspace,
-				nullptr, nullptr, "test window 2", "app name", nullptr);
+				nullptr, "test window 2", "app name");
 		})
 		// subscribe to rendering
 		.on_new_output(setup_output)

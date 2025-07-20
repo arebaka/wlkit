@@ -51,6 +51,7 @@ class Surface;
 
 class Keyboard;
 class Pointer;
+class Switch;
 
 class XDGToplevel;
 class XDGPopup;
@@ -70,6 +71,7 @@ using Object = std::variant<
 	Input*,
 	Keyboard*,
 	Pointer*,
+	Switch*,
 	XDGToplevel*,
 	XDGPopup*,
 	XWayland*
