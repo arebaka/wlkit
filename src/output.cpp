@@ -250,6 +250,7 @@ Output::CommitSeq Output::commit_seq() const {
 Output & Output::switch_to_workspace(Workspace * workspace) {
 	_current_workspace = workspace;
 	_workspaces_history->shift(workspace);
+	workspace->set_output(this);
 	return *this;
 }
 

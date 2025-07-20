@@ -41,7 +41,7 @@ std::string get_current_time() {
 }
 
 void print_separator() {
-	std::cout << std::string(60, '=') << std::endl;
+	std::cout << std::string(25, '=') << std::endl;
 }
 
 void print_workspace_info(wlkit::Server * server) {
@@ -452,8 +452,10 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 	// ––––––––––––––––––––––––––––––––––––––––––
 	// 3) Окна на текущем воркспейсе
 	// ––––––––––––––––––––––––––––––––––––––––––
-	for (auto & win : output->current_workspace()->windows()) {
-		if (!win->xdg_surface()) {
+	auto history = output->current_workspace()->windows_history()->history();
+	history.reverse();
+	for (auto & win : history) {
+		if (!win->surface()) {
 			int x = win->x();
 			int y = win->y() + tab_h;  // сдвиг вниз под панель
 			int w = win->width();
@@ -468,7 +470,7 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 			continue;
 		}
 
-		if (!win->ready()) {
+		if (!win->mapped() || !win->surface()->is_xdg_toplevel()) {
 			continue;
 		}
 
@@ -484,7 +486,7 @@ void ai_test_draw_status(wlkit::Output * output, struct wlr_output * wlr_output,
 			.pass = pass,
 		};
 
-		auto xdg_surface = win->xdg_surface();
+		auto xdg_surface = win->surface()->as_xdg_toplevel()->xdg_surface();
 		wlr_xdg_surface_for_each_surface(xdg_surface, [](auto surface, auto sx, auto sy, auto data) {
 			auto context = static_cast<Context*>(data);
 			auto win = context->win;
@@ -555,6 +557,15 @@ void setup_output(wlkit::Output * output, struct wlr_output * wlr_output, wlkit:
 		.commit_state();
 }
 
+static void launch_program(const char * name, std::vector<const char*> args) {
+	if (fork() == 0) {
+		args.push_back(nullptr);
+		execvp(name, const_cast<char* const*>(args.data()));
+		perror("execvp failed");
+		_exit(1);
+	}
+}
+
 void setup_keyboard(wlkit::Keyboard * keyboard) {
 	keyboard->
 		set_rules("base")
@@ -614,6 +625,15 @@ void setup_keyboard(wlkit::Keyboard * keyboard) {
 			if (sym == XKB_KEY_F4) {
 				print_window_info(server);
 			}
+			if (sym == XKB_KEY_t) {
+				launch_program("kitty", {});
+			}
+			if (sym == XKB_KEY_c) {
+				launch_program("weston-clickdot", {});
+			}
+			if (sym == XKB_KEY_s) {
+				launch_program("weston-simple-shm", {});
+			}
 		});
 }
 
@@ -649,9 +669,19 @@ void setup_pointer(wlkit::Pointer * pointer) {
 					if (window) {
 						output->current_workspace()->focus_window(window);
 						moving_window = window;
+					} else {
+						output->current_workspace()->focus_window(nullptr);
 					}
 				} else {
 					moving_window = nullptr;
+				}
+			} else if (button == 274) {
+				if (state == 1) {
+					auto output = *pointer->server()->outputs().begin();
+					auto window = output->window_at(cursor_x, cursor_y);
+					if (window) {
+						window->close();
+					}
 				}
 			}
 		});
@@ -673,11 +703,11 @@ void create_defaults(wlkit::Output * output, struct wlr_output * wlr_output, wlk
 	auto workspace3 = new wlkit::Workspace(server, layout, 3, "media", nullptr);
 
 	auto window1 = new wlkit::Window(server, workspace1,
-		nullptr, nullptr, "Terminal", "kitty", nullptr);
+		nullptr, "Terminal", "kitty");
 	auto window2 = new wlkit::Window(server, workspace1,
-		nullptr, nullptr, "Web Browser", "firefox", nullptr);
+		nullptr, "Web Browser", "firefox");
 	auto window3 = new wlkit::Window(server, workspace2,
-		nullptr, nullptr, "Text Editor", "code", nullptr);
+		nullptr, "Text Editor", "code");
 
 	window1->move(10, 10).resize(400, 300).map();
 	window2->move(200, 100).resize(500, 400).map();
@@ -690,32 +720,21 @@ void create_defaults(wlkit::Output * output, struct wlr_output * wlr_output, wlk
 	output->switch_to_workspace(workspace1);
 }
 
-static void launch_program(const char * name, std::vector<const char*> args) {
-	if (fork() == 0) {
-		args.push_back(nullptr);
-		execvp(name, const_cast<char* const*>(args.data()));
-		perror("execvp failed");
-		_exit(1);
-	}
-}
-
 int main() {
-	wlr_log_init(WLR_INFO, NULL);
-	auto seat = wlkit::Seat("seat0", nullptr);
+	wlr_log_init(WLR_ERROR, NULL);
+	auto seat = wlkit::Seat("seat0");
 	auto server = wlkit::Server(&seat, setup_portal_env);
 
 	server
-		.on_start(setup_portal_env)
 		.on_start([](auto server) {
-			std::cout << GREEN << "✓ Server started successfully!" << RESET << std::endl;
+			std::cout << BOLD << GREEN << "✓ Server started successfully!" << RESET << std::endl;
 			print_full_status(server);
-			wl_event_loop_add_idle(server->event_loop(), [](void * data) {
-				launch_program("kitty", {});
-			}, nullptr);
 		})
 		.on_stop([](auto server) {
 			std::cout << "Escape!" << std::endl;
 		})
+		.on_new_output(setup_output)
+		.on_new_output(create_defaults)
 		.on_new_output([](auto output, auto wlr_output, auto server) {
 			output->server()->prefer_output(output);
 			// output->on_frame(dummy_draw_frame);
@@ -724,8 +743,6 @@ int main() {
 			output->on_frame(draw_cursor);
 		})
 		.on_new_input(setup_input)
-		.on_new_output(setup_output)
-		.on_new_output(create_defaults)
 		.on_new_xdg_shell_toplevel([](auto window, auto xdg_surface, auto output) {
 			window->on_map([](auto window) {
 				window->move(0, 0).resize(800, 500);

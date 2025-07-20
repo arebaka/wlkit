@@ -6,6 +6,9 @@
 #include "device/keyboard.hpp"
 #include "device/pointer.hpp"
 
+#include "surface/xdg_toplevel.hpp"
+// #include "surface/xwayland.hpp"
+
 #include <algorithm>
 
 extern "C" {
@@ -90,8 +93,6 @@ _seat(seat), _running(false), _data(nullptr) {
 	wl_signal_add(&_backend->events.new_input, &_new_input_listener);
 
 	_xdg_shell = wlr_xdg_shell_create(_display, 5);
-	_new_xdg_shell_surface_listener.notify = _handle_new_xdg_shell_surface;
-	wl_signal_add(&_xdg_shell->events.new_surface, &_new_xdg_shell_surface_listener);
 	_new_xdg_shell_toplevel_listener.notify = _handle_new_xdg_shell_toplevel;
 	wl_signal_add(&_xdg_shell->events.new_toplevel, &_new_xdg_shell_toplevel_listener);
 	_new_xdg_shell_popup_listener.notify = _handle_new_xdg_shell_popup;
@@ -373,21 +374,14 @@ Server & Server::on_new_input(const NewInputHandler & handler) {
 	return *this;
 }
 
-Server & Server::on_new_xdg_shell_surface(const NewXDGShellSurfaceHandler & handler) {
-	if (handler) {
-		_on_new_xdg_shell_surface.push_back(std::move(handler));
-	}
-	return *this;
-}
-
-Server & Server::on_new_xdg_shell_toplevel(const NewXDGShellSurfaceHandler & handler) {
+Server & Server::on_new_xdg_shell_toplevel(const NewSurfaceHandler & handler) {
 	if (handler) {
 		_on_new_xdg_shell_toplevel.push_back(std::move(handler));
 	}
 	return *this;
 }
 
-Server & Server::on_new_xdg_shell_popup(const NewXDGShellSurfaceHandler & handler) {
+Server & Server::on_new_xdg_shell_popup(const NewSurfaceHandler & handler) {
 	if (handler) {
 		_on_new_xdg_shell_popup.push_back(std::move(handler));
 	}
@@ -435,10 +429,10 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
-		input = new Keyboard(server, device, nullptr);
+		input = new Keyboard(server, device);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
-		input = new Pointer(server, device, nullptr);
+		input = new Pointer(server, device);
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
 		return;
@@ -463,36 +457,18 @@ void Server::_handle_new_input(struct wl_listener * listener, void * data) {
 	}
 }
 
-void Server::_handle_new_xdg_shell_surface(struct wl_listener * listener, void * data) {
-	Server * server = wl_container_of(listener, server, _new_xdg_shell_surface_listener);
-	auto xdg_surface = static_cast<struct wlr_xdg_surface*>(data);
-	auto output = server->preferred_output();
-	auto workspace = output->current_workspace();
-
-	if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL || xdg_surface->role == WLR_XDG_SURFACE_ROLE_POPUP) {
-		return;
-	}
-
-	wlr_xdg_surface_ping(xdg_surface);
-
-	auto window = new Window(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
-	for (auto & cb : server->_on_new_xdg_shell_surface) {
-		cb(window, xdg_surface, output);
-	}
-}
-
 void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void * data) {
 	Server * server = wl_container_of(listener, server, _new_xdg_shell_toplevel_listener);
 	auto xdg_toplevel = static_cast<struct wlr_xdg_toplevel*>(data);
-	auto xdg_surface = xdg_toplevel->base;
 	auto output = server->preferred_output();
 	auto workspace = output->current_workspace();
 
-	wlr_xdg_surface_ping(xdg_surface);
+	auto surface = new XDGToplevel(xdg_toplevel->base);
+	surface->ping();
 
-	auto window = new Window(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
+	auto window = new Window(server, workspace, surface);
 	for (auto & cb : server->_on_new_xdg_shell_toplevel) {
-		cb(window, xdg_surface, output);
+		cb(window, surface, output);
 	}
 
 	// if (server->portal_manager) {
@@ -502,18 +478,18 @@ void Server::_handle_new_xdg_shell_toplevel(struct wl_listener * listener, void 
 }
 
 void Server::_handle_new_xdg_shell_popup(struct wl_listener * listener, void * data) {
-	Server * server = wl_container_of(listener, server, _new_xdg_shell_surface_listener);
+	Server * server = wl_container_of(listener, server, _new_xdg_shell_popup_listener);
 	auto xdg_popup = static_cast<struct wlr_xdg_popup*>(data);
-	auto xdg_surface = xdg_popup->base;
 	auto output = server->preferred_output();
 	auto workspace = output->current_workspace();
 
-	wlr_xdg_surface_ping(xdg_surface);
+	// auto surface = new XDGPopup(xdg_popup->base);
+	// surface->ping();
 
-	auto window = new Window(server, workspace, xdg_surface, nullptr, nullptr, nullptr, nullptr);
-	for (auto & cb : server->_on_new_xdg_shell_popup) {
-		cb(window, xdg_surface, output);
-	}
+	// auto window = new Window(server, workspace, surface);
+	// for (auto & cb : server->_on_new_xdg_shell_popup) {
+	// 	cb(window, surface, output);
+	// }
 }
 
 void Server::_handle_new_layer_shell_surface(struct wl_listener * listener, void * data) {

@@ -18,6 +18,7 @@ private:
 	std::list<Window*> _windows;
 	WindowsHistory * _windows_history;
 	Window * _focused_window;
+	Output * _output;
 	void * _data;
 
 	std::list<Handler> _on_create;
@@ -50,8 +51,10 @@ public:
 	[[nodiscard]] std::list<Window*> windows() const;
 	[[nodiscard]] WindowsHistory * windows_history() const;
 	[[nodiscard]] Window * focused_window() const;
+	[[nodiscard]] Output * output() const;
 	[[nodiscard]] void * data() const;
 
+	Workspace & set_output(Output * output);
 	// TODO setters
 
 	Workspace & on_destroy(const Handler & handler);

@@ -66,7 +66,7 @@ public:
 	Keyboard(
 		Server * server,
 		struct ::wlr_input_device * device,
-		const Handler & callback);
+		const Handler & callback = nullptr);
 	~Keyboard() override;
 
 	bool is_keyboard() const override;

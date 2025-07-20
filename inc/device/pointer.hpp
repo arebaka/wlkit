@@ -79,20 +79,20 @@ public:
 	Pointer(
 		Server * server,
 		struct ::wlr_input_device * device,
-		const Handler & callback);
+		const Handler & callback = nullptr);
 	~Pointer() override;
 
 	bool is_pointer() const override;
 	Pointer * as_pointer() override;
 
-	Pointer & send_swipe_begin(NFingers n_fingers);
+	Pointer & send_swipe_begin(NFingers n_fingers = 1);
 	Pointer & send_swipe_update(Geo dx, Geo dy);
-	Pointer & send_swipe_end(bool cancelled);
-	Pointer & send_pinch_begin(NFingers n_fingers);
+	Pointer & send_swipe_end(bool cancelled = false);
+	Pointer & send_pinch_begin(NFingers n_fingers = 1);
 	Pointer & send_pinch_update(Geo dx, Geo dy, PinchScale scale, PinchRotation rotation);
-	Pointer & send_pinch_end(bool cancelled);
-	Pointer & send_hold_begin(NFingers n_fingers);
-	Pointer & send_hold_end(bool cancelled);
+	Pointer & send_pinch_end(bool cancelled = false);
+	Pointer & send_hold_begin(NFingers n_fingers = 1);
+	Pointer & send_hold_end(bool cancelled = false);
 
 	Pointer & constraint_for_surface(Surface * surface);
 	Pointer & send_constraint_activated(Surface * surface);

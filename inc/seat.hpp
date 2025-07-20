@@ -68,7 +68,7 @@ private:
 public:
 	Seat(
 		char * name,
-		const Handler & callback);
+		const Handler & callback = nullptr);
 	~Seat();
 
 	void set_capabilities(Capabilities capabilities);

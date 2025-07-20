@@ -1,4 +1,5 @@
 #pragma once
+
 #ifndef WLKIT_COMMON_H
 #define WLKIT_COMMON_H
 
@@ -51,6 +52,11 @@ class Surface;
 class Keyboard;
 class Pointer;
 
+class XDGToplevel;
+class XDGPopup;
+class XWayland;
+
+
 using Object = std::variant<
 	Seat*,
 	Server*,
@@ -63,7 +69,10 @@ using Object = std::variant<
 	Window*,
 	Input*,
 	Keyboard*,
-	Pointer*
+	Pointer*,
+	XDGToplevel*,
+	XDGPopup*,
+	XWayland*
 >;
 
 }

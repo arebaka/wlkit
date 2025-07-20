@@ -14,12 +14,13 @@ public:
 	using PendingCode = uint32_t;
 	using StateSeq = uint32_t;
 	using BufferScale = int32_t;
+	using Serial = uint32_t;
 
 	using Handler = std::function<void(Surface*)>;
 	using NewSubsurfaceHandler = std::function<
 		void(Surface * surface, struct ::wlr_subsurface * subsurface)>;
 
-private:
+protected:
 	struct ::wlr_surface * _surface;
 
 	std::list<Handler> _on_create;
@@ -39,9 +40,29 @@ private:
 
 public:
 	Surface(
+		struct ::wlr_surface * surface,
+		const Handler & callback = nullptr);
+	Surface(
 		struct ::wl_resource * resource,
-		const Handler & callback);
-	~Surface();
+		const Handler & callback = nullptr);
+	virtual ~Surface();
+
+	virtual bool is_xdg_toplevel() const;
+	virtual XDGToplevel * as_xdg_toplevel();
+	virtual bool is_xdg_popup() const;
+	virtual XDGPopup * as_xdg_popup();
+	virtual bool is_xwayland() const;
+	virtual XWayland * as_xwayland();
+
+	virtual bool initialized() const;
+	virtual const char * title() const;
+	virtual const char * app_id() const;
+	virtual void ping();
+	virtual void close();
+	virtual Serial set_size(Geo width, Geo height);
+	virtual Serial set_maximized(bool maximized);
+	virtual Serial set_fullscreen(bool fullscreen);
+	virtual Serial set_activated(bool activated);
 
 	bool set_role(struct ::wlr_surface_role * role, struct ::wl_resource * error_resource, RoleErrorCode error_code);
 	Surface & set_role_object(struct ::wlr_surface_role * role, struct ::wl_resource * role_resource);
@@ -72,7 +93,7 @@ public:
 	Surface & on_unmap(const Handler & handler);
 	Surface & on_new_subsurface(const NewSubsurfaceHandler & handler);
 
-private:
+protected:
 	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 	static void _handle_client_commit(struct ::wl_listener * listener, void * data);
 	static void _handle_commit(struct ::wl_listener * listener, void * data);

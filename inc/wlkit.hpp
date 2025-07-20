@@ -10,7 +10,8 @@
 #include "workspace.hpp"
 #include "layout.hpp"
 #include "window.hpp"
-#include "surface.hpp"
 
 #include "device/keyboard.hpp"
 #include "device/pointer.hpp"
+
+#include "surface/xdg_toplevel.hpp"

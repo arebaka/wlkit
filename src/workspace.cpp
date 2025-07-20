@@ -50,8 +50,10 @@ Workspace & Workspace::remove_window(Window * window) {
 
 Workspace & Workspace::focus_window(Window * window) {
 	if (!window) {
+		_focused_window = nullptr;
 		return *this;
 	}
+
 	if (std::find(_windows.begin(), _windows.end(), window) == _windows.end()) {
 		return *this;
 	}
@@ -90,8 +92,17 @@ Window * Workspace::focused_window() const {
 	return _focused_window;
 }
 
+Output * Workspace::output() const {
+	return _output;
+}
+
 void * Workspace::data() const {
 	return _data;
+}
+
+Workspace & Workspace::set_output(Output * output) {
+	_output = output;
+	return *this;
 }
 
 Workspace & Workspace::on_destroy(const Handler & handler) {

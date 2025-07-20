@@ -3,6 +3,18 @@
 
 using namespace wlkit;
 
+Surface::Surface(struct wlr_surface * surface, const Handler & callback) {
+	if (!surface) {
+		// TODO error
+	}
+	_surface = surface;
+
+	if (callback) {
+		_on_create.push_back(callback);
+		callback(this);
+	}
+}
+
 Surface::Surface(struct wl_resource * resource, const Handler & callback) {
 	if (!resource) {
 		// TODO error
@@ -23,6 +35,62 @@ Surface::~Surface() {
 	for (auto & cb : _on_destroy) {
 		cb(this);
 	}
+}
+
+bool Surface::is_xdg_toplevel() const {
+	return false;
+}
+
+XDGToplevel * Surface::as_xdg_toplevel() {
+	return nullptr;
+}
+
+bool Surface::is_xdg_popup() const {
+	return false;
+}
+
+XDGPopup * Surface::as_xdg_popup() {
+	return nullptr;
+}
+
+bool Surface::is_xwayland() const {
+	return false;
+}
+
+XWayland * Surface::as_xwayland() {
+	return nullptr;
+}
+
+bool Surface::initialized() const {
+	return true;
+}
+
+const char * Surface::title() const {
+	return nullptr;
+}
+
+const char * Surface::app_id() const {
+	return nullptr;
+}
+
+void Surface::ping() {}
+
+void Surface::close() {}
+
+Surface::Serial Surface::set_size(Geo width, Geo height) {
+	return 0;
+}
+
+Surface::Serial Surface::set_maximized(bool maximized) {
+	return 0;
+}
+
+Surface::Serial Surface::set_fullscreen(bool fullscreen) {
+	return 0;
+}
+
+Surface::Serial Surface::set_activated(bool activated) {
+	return 0;
 }
 
 bool Surface::set_role(struct wlr_surface_role * role, struct wl_resource * error_resource, RoleErrorCode error_code) {

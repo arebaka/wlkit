@@ -49,12 +49,6 @@ namespace wlkit {
 
 class Server {
 public:
-	struct PendingXDGWindow {
-		struct ::wl_listener listener;
-		Server * server;
-		Workspace * workspace;
-	};
-
 	using Handler = std::function<void(Server*)>;
 	using OutputLayoutChangeHandler = std::function<
 		void(Server * server, struct ::wlr_output_layout * layout)>;
@@ -62,8 +56,8 @@ public:
 		void(Output * output, struct ::wlr_output * wlr_output, Server * server)>;
 	using NewInputHandler = std::function<
 		void(Input * input, struct ::wlr_input_device * device, Server * server)>;
-	using NewXDGShellSurfaceHandler = std::function<
-		void(Window * window, struct ::wlr_xdg_surface * xdg_surface, Output * output)>;
+	using NewSurfaceHandler = std::function<
+		void(Window * window, Surface * surface, Output * output)>;
 
 private:
 	Seat * _seat;
@@ -130,15 +124,13 @@ private:
 	std::list<OutputLayoutChangeHandler> _on_output_layout_change;
 	std::list<NewOutputHandler> _on_new_output;
 	std::list<NewInputHandler> _on_new_input;
-	std::list<NewXDGShellSurfaceHandler> _on_new_xdg_shell_surface;
-	std::list<NewXDGShellSurfaceHandler> _on_new_xdg_shell_toplevel;
-	std::list<NewXDGShellSurfaceHandler> _on_new_xdg_shell_popup;
+	std::list<NewSurfaceHandler> _on_new_xdg_shell_toplevel;
+	std::list<NewSurfaceHandler> _on_new_xdg_shell_popup;
 
 	struct ::wl_listener _destroy_listener;
 	struct ::wl_listener _output_layout_change_listener;
 	struct ::wl_listener _new_output_listener;
 	struct ::wl_listener _new_input_listener;
-	struct ::wl_listener _new_xdg_shell_surface_listener;
 	struct ::wl_listener _new_xdg_shell_toplevel_listener;
 	struct ::wl_listener _new_xdg_shell_popup_listener;
 	struct ::wl_listener _new_layer_shell_surface_listener;
@@ -159,7 +151,7 @@ private:
 public:
 	Server(
 		Seat * seat,
-		const Handler & callback);
+		const Handler & callback = nullptr);
 
 	~Server();
 
@@ -206,16 +198,14 @@ public:
 	Server & on_output_layout_change(const OutputLayoutChangeHandler & handler);
 	Server & on_new_output(const NewOutputHandler & handler);
 	Server & on_new_input(const NewInputHandler & handler);
-	Server & on_new_xdg_shell_surface(const NewXDGShellSurfaceHandler & handler);
-	Server & on_new_xdg_shell_toplevel(const NewXDGShellSurfaceHandler & handler);
-	Server & on_new_xdg_shell_popup(const NewXDGShellSurfaceHandler & handler);
+	Server & on_new_xdg_shell_toplevel(const NewSurfaceHandler & handler);
+	Server & on_new_xdg_shell_popup(const NewSurfaceHandler & handler);
 
 private:
 	static void _handle_destroy(struct ::wl_listener * listener, void * data);
 	static void _handle_output_layout_change(struct ::wl_listener * listener, void * data);
 	static void _handle_new_output(struct ::wl_listener * listener, void * data);
 	static void _handle_new_input(struct ::wl_listener * listener, void * data);
-	static void _handle_new_xdg_shell_surface(struct ::wl_listener * listener, void * data);
 	static void _handle_new_xdg_shell_toplevel(struct ::wl_listener * listener, void * data);
 	static void _handle_new_xdg_shell_popup(struct ::wl_listener * listener, void * data);
 	static void _handle_new_layer_shell_surface(struct ::wl_listener * listener, void * data);
